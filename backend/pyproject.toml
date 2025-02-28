@@ -1,0 +1,43 @@
+
+[project]
+name = "backend"
+version = "0.1.0"
+description = "Бэкенд для проекта DevOps-Spring-2025"
+readme = "README.md"
+requires-python = ">=3.12"
+
+authors = [
+    { name = "Krisanov Roman", email = "rkrisanoff@gmail.com" },
+    { name = "Vyugina Anastasia" },
+]
+dependencies = [
+    "alembic==1.14.1",
+    "asyncpg==0.30.0",
+    "click>=8.1.8",
+    "environ==1.0",
+    "environ-config==24.1.0",
+    "litestar==2.15.1",
+    "msgspec==0.19.0",
+    "sqlalchemy==2.0.38",
+    "uvicorn==0.34.0",
+]
+
+[dependency-groups]
+dev = [
+    "dotenv==0.9.9",
+    "mypy==1.15.0",
+    "pre-commit==4.1.0",
+    "pytest==8.3.4",
+    "pytest-asyncio==0.25.3",
+    "ruff==0.9.8",
+]
+
+[tool.ruff]
+line-length = 88
+target-version = "py312"
+select = ["E", "F", "I", "UP"]
+ignore = []
+
+[tool.ruff.isort]
+known-first-party = ["app"]
+

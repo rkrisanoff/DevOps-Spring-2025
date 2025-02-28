@@ -1,0 +1,55 @@
+version: '3.8'
+
+services:
+  backend:
+    build:
+      context: backend/
+      dockerfile: ./Dockerfile
+    ports:
+      - "8001:8000"
+    depends_on:
+      migrator:
+        condition: service_completed_successfully
+    environment:
+      - PROJECT_POSTGRES_DATABASE=postgres
+      - PROJECT_POSTGRES_USER=postgres
+      - PROJECT_POSTGRES_PASSWORD=postgres
+      - PROJECT_POSTGRES_HOST=postgres
+      - PROJECT_POSTGRES_PORT=5432
+      - PROJECT_COMMON_VERSION=0.1.0
+
+  migrator:
+    build:
+      context: backend/
+      dockerfile: ./Dockerfile
+    command: uv run alembic --config=./etc/alembic.ini upgrade head
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      - ALEMBIC_POSTGRES_DATABASE=postgres
+      - ALEMBIC_POSTGRES_USER=postgres
+      - ALEMBIC_POSTGRES_PASSWORD=postgres
+      - ALEMBIC_POSTGRES_HOST=postgres
+      - ALEMBIC_POSTGRES_PORT=5432
+
+    restart: "no"
+
+  postgres:
+    image: postgres:16
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_DB=postgres
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  postgres_data: 
