@@ -43,12 +43,16 @@ button:hover {
 }
 
 .toggle-table-btn {
-    margin: 10px 10px 10px 20px;
+    margin: 20px 10px 10px 20px;
 }
 
 .update-table-btn {
     margin: 10px 10px 10px 10px;
     display: none;
+}
+
+.health-check-button {
+    margin: 10px 10px 10px 20px;
 }
 
 /* Search input styles */

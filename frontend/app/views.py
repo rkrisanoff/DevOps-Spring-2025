@@ -5,6 +5,10 @@ from .models import Client
 import json
 from datetime import datetime
 
+import requests
+from requests.adapters import HTTPAdapter
+import json
+
 # Список клиентов (вне БД, для демо)
 clients_data = [
     {
@@ -112,3 +116,41 @@ def update_client(request):
 def get_clients(request):
     if request.method == 'GET':
         return JsonResponse(clients_data, safe=False)
+
+
+@csrf_exempt
+def backend_health_check(request):
+    if request.method == 'GET':
+        try:
+            # url = "http://127.0.0.1:8001/version"
+            url= "http://backend:8000/version"
+            s = requests.Session()
+            s.mount(url, HTTPAdapter(max_retries=3))
+            backend_status = s.get(url)
+
+            print(url)
+            print(backend_status.status_code)
+
+            selected_color = 'red' if backend_status.status_code != 200 else 'green'
+            if backend_status.status_code == 200:   
+                info = json.loads(
+                    backend_status.content.decode('utf-8')
+                )
+                msg = f"Version: {info['version']}"
+            else: msg = 'Error'
+
+            return JsonResponse({
+                'status': 'success',
+                'color': selected_color,
+                'msg': msg
+            })
+        
+        except Exception as e:
+            print(e)
+            return JsonResponse({
+                'status': 'success',
+                'color': "red",
+                'msg': 'Error'
+            })
+    
+    return JsonResponse({'status': 'error', 'message': 'Invalid request method'}, status=405)

@@ -146,4 +146,25 @@ document.addEventListener('DOMContentLoaded', function() {
             });
     }
 
+    // Add event listener for the color change button
+    const backendCheckBtn = document.getElementById('backendCheckBtn');
+    backendCheckBtn.addEventListener('click', function() {
+        backendCheckBtn.style.backgroundColor = "grey";
+        backendCheckBtn.textContent = `processing...`
+        fetch('/backend_health_check/') // Call the new endpoint
+            .then(response => response.json())
+            .then(data => {
+                if (data.status === 'success') {
+                    backendCheckBtn.style.backgroundColor = data.color; 
+                    backendCheckBtn.textContent = `Backend: ${data.msg}`
+                } else {
+                    alert('Error: ' + data.message);
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('Error with checking backend health');
+            });
+    });
+
 });

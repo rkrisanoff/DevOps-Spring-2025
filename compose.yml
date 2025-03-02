@@ -51,5 +51,12 @@ services:
       timeout: 5s
       retries: 5
 
+  frontend:
+    build:
+      context: frontend/
+      dockerfile: ./Dockerfile
+    ports:
+      - "8002:8005"
+
 volumes:
   postgres_data: 
