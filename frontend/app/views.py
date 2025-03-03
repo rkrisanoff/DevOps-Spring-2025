@@ -128,9 +128,6 @@ def backend_health_check(request):
             s.mount(url, HTTPAdapter(max_retries=3))
             backend_status = s.get(url)
 
-            print(url)
-            print(backend_status.status_code)
-
             selected_color = 'red' if backend_status.status_code != 200 else 'green'
             if backend_status.status_code == 200:   
                 info = json.loads(

@@ -3,21 +3,28 @@
 Фронтенд для проекта DevOps-Spring-2025 (заготовка).
 
 ## Технологии
-
-В будущем здесь будет фронтенд
+* Python, Django
+* Js + CSS
 
 ## Разработка
 
-TODO: Добавить инструкции по разработке фронтенда 
-
-dev:
+Запуск веб-сервиса внутри контейнера:
 ```bash
-docker run -it --rm --entrypoint /bin/bash -v.:/frontend -p 8000:8000 --name v1 frontend
+python3 manage.py runserver 0.0.0.0:8005
 ```
 
-prod:
+dev-запуск отдельного контейнера:
+```bash
+docker run -it --rm --entrypoint /bin/bash -v.:/frontend -p 8002:8005 --name frontend-dev frontend
+```
+
+prod-запуск отдельного контейнера:
 ```bash 
-docker run --rm -d -p 8000:8000 --name v1 frontend
+docker run --rm -d -p 8002:8005 --name frontend-prod frontend
 ```
 
-todo: зафиксировать версию Python внутри контейнера
+### TODO-list:
+* зафиксировать версию Python внутри контейнера
+* настроить запросы к серверу с retry и т.д.
+* добавить обновление БД по кнопке show (сейчас показывает только то, что есть в памяти)
+* оставить пустую таблицу в main_screen по умолчанию, обновлять при показе
