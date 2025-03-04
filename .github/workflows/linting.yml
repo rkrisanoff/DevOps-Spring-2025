@@ -1,0 +1,35 @@
+name: Code Clean-up
+run-name:  Clean up push action at ${{ github.ref }}
+on: [push]
+jobs:
+  frontend-linting-test:
+    runs-on: ubuntu-latest
+    steps: 
+      - uses: actions/checkout@v4
+      - name: Setup Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: 3.12
+      - name: Install Linting dependencies
+        run:  | 
+          python -m pip install --upgrade pip
+          pip install ruff==0.9.9
+      - name: Run Ruff Linter
+        run: ruff check --fix frontend/
+
+  backend-linting-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install the latest version of uv
+        uses: astral-sh/setup-uv@v5
+      - name: Setup libraries
+        run: |
+          cd backend/
+          uv sync
+          uv pip install -e .[dev]
+      - name: Run Ruff linter
+        run: |
+          cd backend/
+          uv run ruff check
+

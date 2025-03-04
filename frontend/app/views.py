@@ -134,7 +134,8 @@ def backend_health_check(request):
                     backend_status.content.decode('utf-8')
                 )
                 msg = f"Version: {info['version']}"
-            else: msg = 'Error'
+            else: 
+                msg = 'Error'
 
             return JsonResponse({
                 'status': 'success',
