@@ -1,0 +1,34 @@
+[project]
+name = "frontend"
+version = "0.1.0"
+description = "Фронтенд для проекта DevOps-Spring-2025"
+readme = "README.md"
+requires-python = ">=3.12"
+
+authors = [
+    { name = "Krisanov Roman", email = "rkrisanoff@gmail.com" },
+    { name = "Vyugina Anastasia", email = "vnastav@gmail.com" },
+]
+
+dependencies = [
+    "django==5.1.6",
+    "requests==2.32.3",
+    "tzdata>=2025.1 ; sys_platform == 'linux'",
+]
+
+[dependency-groups]
+dev = [
+    "ruff==0.9.9",
+]
+
+[tool.setuptools]
+py-modules = []
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+select = ["E", "F", "I", "UP"]
+ignore = []
+
+[tool.ruff.isort]
+known-first-party = ["app"]

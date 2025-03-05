@@ -1,9 +1,17 @@
 FROM ubuntu:noble-20250127
 
-RUN apt-get update && apt-get install -y python3-dev python3-pip
+RUN apt-get update && apt-get install -y \
+    curl \
+    && rm -rf /var/lib/apt/lists/*
+
+RUN curl -LsSf https://astral.sh/uv/install.sh | sh
+ENV PATH="/root/.local/bin:$PATH"
+RUN uv --version
+
 WORKDIR /frontend
 
 COPY . .
-RUN pip install -r requirements.txt --break-system-packages
+RUN uv sync --no-dev
+RUN uv pip install -e .
 
-ENTRYPOINT  [ "python3", "manage.py", "runserver", "0.0.0.0:8005" ]
+ENTRYPOINT  [ "uv", "run", "python", "manage.py", "runserver", "0.0.0.0:8005" ]

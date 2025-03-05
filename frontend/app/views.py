@@ -1,13 +1,13 @@
-from django.http import HttpResponse, JsonResponse
-from django.shortcuts import render
-from django.views.decorators.csrf import csrf_exempt
-from .models import Client
 import json
 from datetime import datetime
 
 import requests
+from django.http import JsonResponse
+from django.shortcuts import render
+from django.views.decorators.csrf import csrf_exempt
 from requests.adapters import HTTPAdapter
-import json
+
+from .models import Client
 
 # Список клиентов (вне БД, для демо)
 clients_data = [
