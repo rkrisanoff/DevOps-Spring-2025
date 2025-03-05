@@ -8,36 +8,52 @@ requires-python = ">=3.12"
 
 authors = [
     { name = "Krisanov Roman", email = "rkrisanoff@gmail.com" },
-    { name = "Vyugina Anastasia" },
+    { name = "Vyugina Anastasia", email = "vnastav@gmail.com" },
 ]
+
 dependencies = [
-    "alembic==1.14.1",
-    "asyncpg==0.30.0",
-    "click>=8.1.8",
-    "environ==1.0",
-    "environ-config==24.1.0",
-    "litestar==2.15.1",
-    "msgspec==0.19.0",
-    "sqlalchemy==2.0.38",
-    "uvicorn==0.34.0",
+    "alembic==1.14.*",
+    "asyncpg==0.30.*",
+    "click==8.1.*",
+    "environ-config==24.1.*",
+    "litestar==2.15.*",
+    "msgspec==0.19.*",
+    "sqlalchemy==2.0.*",
+    "uvicorn==0.34.*",
 ]
 
 [dependency-groups]
 dev = [
-    "dotenv==0.9.9",
-    "mypy==1.15.0",
-    "pre-commit==4.1.0",
-    "pytest==8.3.4",
-    "pytest-asyncio==0.25.3",
-    "ruff==0.9.8",
+    "dotenv==0.9.*",
+    "mypy==1.15.*",
+    "pre-commit==4.1.*",
+    "pytest==8.3.*",
+    "pytest-asyncio==0.25.*",
+    "ruff==0.9.*",
 ]
-
 [tool.ruff]
-line-length = 88
+line-length = 100
 target-version = "py312"
-select = ["E", "F", "I", "UP"]
-ignore = []
 
-[tool.ruff.isort]
-known-first-party = ["app"]
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "C4", "ARG", "SIM", "ERA", "PL", "RUF"]
+ignore = ["E203", "E501", "RUF003"]
+unfixable = ["F401"]
 
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+line-ending = "auto"
+skip-magic-trailing-comma = false
+
+[tool.ruff.lint.isort]
+known-first-party = ["backend"]
+combine-as-imports = true
+
+[tool.ruff.lint.flake8-quotes]
+docstring-quotes = "double"
+inline-quotes = "double"
+
+[tool.ruff.lint.per-file-ignores]
+"__init__.py" = ["F401"]
+"tests/**/*.py" = ["PLR2004", "ARG001"]
