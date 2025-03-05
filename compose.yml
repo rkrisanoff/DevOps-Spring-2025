@@ -17,12 +17,18 @@ services:
       - PROJECT_POSTGRES_HOST=postgres
       - PROJECT_POSTGRES_PORT=5432
       - PROJECT_COMMON_VERSION=0.1.0
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://backend:8000/version"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
 
   migrator:
     build:
       context: backend/
       dockerfile: ./Dockerfile
-    command: uv run alembic --config=./etc/alembic.ini upgrade head
+    entrypoint: uv run alembic --config=./etc/alembic.ini upgrade head
     depends_on:
       postgres:
         condition: service_healthy
@@ -55,6 +61,10 @@ services:
     build:
       context: frontend/
       dockerfile: ./Dockerfile
+    depends_on:
+      backend:
+        condition: service_healthy
+
     ports:
       - "8002:8005"
 
