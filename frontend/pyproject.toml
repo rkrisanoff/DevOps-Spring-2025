@@ -13,7 +13,7 @@ authors = [
 dependencies = [
     "django==5.1.6",
     "requests==2.32.3",
-    "tzdata>=2025.1 ; sys_platform == 'linux'",
+    "tzdata==2025.1 ; sys_platform == 'linux'",
 ]
 
 [dependency-groups]

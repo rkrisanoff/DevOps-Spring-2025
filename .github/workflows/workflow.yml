@@ -2,7 +2,7 @@ name: Code Clean-up
 run-name:  Clean up push action at ${{ github.ref }}
 on: [push]
 jobs:
-  frontend-linting:
+  linting:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -15,32 +15,11 @@ jobs:
           uv pip install --editable .[dev]
       - name: Run Ruff linter
         run: |
-          cd frontend/
-          uv run pre-commit run --all-files
-
-
-  backend-linting:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - name: Install the latest version of uv
-        uses: astral-sh/setup-uv@v5
-      - name: Setup libraries
-        run: |
-          cd backend/
-          uv sync
-          uv pip install --editable '.[dev]'
-      - name: Just
-        run: |
-          pwd
-          ls -la
-      - name: Run Ruff linter
-        run: |
           cd backend/
           uv run pre-commit run --all-files
 
   backend-tests:
-    needs: [backend-linting]
+    needs: [linting]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4

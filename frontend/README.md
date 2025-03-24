@@ -20,7 +20,7 @@ docker run -it --rm --entrypoint /bin/bash -v .:/frontend -p 8002:8005 --name fr
 В этом случае в `frontend/` появится папка `.venv`, отвечающая за окружение внутри контейнера.
 
 prod-запуск отдельного контейнера:
-```bash 
+```bash
 docker run --rm -d -p 8002:8005 --name frontend-prod frontend
 ```
 

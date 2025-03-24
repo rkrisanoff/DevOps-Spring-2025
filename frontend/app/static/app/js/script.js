@@ -1,6 +1,6 @@
 document.addEventListener('DOMContentLoaded', function() {
     const table = document.querySelector('.client-table');
-    const searchContainer = document.querySelector('.search-container');    
+    const searchContainer = document.querySelector('.search-container');
     const toggleTableBtn = document.querySelector('.toggle-table-btn');
     const updateTableBtn = document.querySelector('.update-table-btn');
 
@@ -20,7 +20,7 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     });
 
-    
+
     // Add click handlers to table rows
     const tableRows = document.querySelectorAll('.client-table tbody tr');
     tableRows.forEach(row => {
@@ -34,7 +34,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const createForm = document.getElementById('createForm');
     createForm.addEventListener('submit', function(e) {
         e.preventDefault();
-        
+
         const formData = {
             name: document.getElementById('createName').value,
             quantity: parseInt(document.getElementById('createQuantity').value)
@@ -67,7 +67,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const updateForm = document.getElementById('updateForm');
     updateForm.addEventListener('submit', function(e) {
         e.preventDefault();
-        
+
         const formData = {
             id: parseInt(document.getElementById('updateId').value),
             name: document.getElementById('updateName').value,
@@ -155,7 +155,7 @@ document.addEventListener('DOMContentLoaded', function() {
             .then(response => response.json())
             .then(data => {
                 if (data.status === 'success') {
-                    backendCheckBtn.style.backgroundColor = data.color; 
+                    backendCheckBtn.style.backgroundColor = data.color;
                     backendCheckBtn.textContent = `Backend: ${data.msg}`
                 } else {
                     alert('Error: ' + data.message);

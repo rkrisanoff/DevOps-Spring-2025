@@ -3,11 +3,13 @@ from datetime import datetime
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
-from backend.domain.models import Book, BookGenre, Status
-from backend.entrypoints.webserver.controllers.books import BooksController
 from litestar import Litestar
 from litestar.testing import TestClient
 from sqlalchemy.ext.asyncio import AsyncSession
+
+from booker.api.rest.controllers.books import BooksController
+from booker.domain.entities import Status
+from booker.domain.models import Book, BookGenre
 
 
 @pytest.fixture
