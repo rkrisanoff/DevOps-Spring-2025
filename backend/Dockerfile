@@ -6,16 +6,15 @@ RUN apt-get update && apt-get install -y \
 
 RUN curl -LsSf https://astral.sh/uv/install.sh | sh
 ENV PATH="/root/.local/bin:$PATH"
-RUN uv --version
 
 WORKDIR /project
 
 COPY . .
 
 RUN uv sync --no-dev
-RUN uv pip install -e .
+RUN uv pip install --editable .
 
 EXPOSE 8000
 
 
-ENTRYPOINT ["uv", "run", "python","src/backend/entrypoints/webserver/run.py"]
+ENTRYPOINT ["uv", "run", "run_webserver"]

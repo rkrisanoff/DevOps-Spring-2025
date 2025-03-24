@@ -6,8 +6,8 @@ from sqlalchemy import engine_from_config, pool
 from sqlalchemy.engine import Connection
 from sqlalchemy.ext.asyncio import AsyncEngine
 
-from backend.domain.models import Base
-from backend.settings import PostgresConfig
+from booker.domain.models import Base
+from booker.settings import PostgresConfig
 
 config = context.config
 

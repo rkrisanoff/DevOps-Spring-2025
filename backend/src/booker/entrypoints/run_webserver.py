@@ -2,8 +2,8 @@ import click
 import environ
 import uvicorn
 
-from backend.entrypoints.webserver.server import create_server
-from backend.settings import WebServerConfig
+from booker.servers.webserver.server import create_server
+from booker.settings import WebServerConfig
 
 
 @click.command()

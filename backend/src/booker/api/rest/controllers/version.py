@@ -1,6 +1,6 @@
 import litestar
 
-from backend.settings import WebServerConfig
+from booker.settings import WebServerConfig
 
 
 @litestar.get("/version")
