@@ -1,5 +1,3 @@
-version: '3.8'
-
 services:
   backend:
     build:
@@ -69,4 +67,4 @@ services:
       - "8002:8005"
 
 volumes:
-  postgres_data: 
+  postgres_data:
