@@ -30,6 +30,10 @@ jobs:
           cd backend/
           uv sync
           uv pip install --editable '.[dev]'
+      - name: Just
+        run: |
+          pwd
+          ls -la
       - name: Run Ruff linter
         run: |
           cd backend/

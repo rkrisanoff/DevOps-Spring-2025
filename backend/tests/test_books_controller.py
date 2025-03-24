@@ -1,14 +1,13 @@
-import pytest
+from collections.abc import AsyncGenerator
 from datetime import datetime
-from typing import List, AsyncGenerator
-from unittest.mock import MagicMock, AsyncMock
+from unittest.mock import AsyncMock, MagicMock
 
+import pytest
+from backend.domain.models import Book, BookGenre, Status
+from backend.entrypoints.webserver.controllers.books import BooksController
 from litestar import Litestar
 from litestar.testing import TestClient
 from sqlalchemy.ext.asyncio import AsyncSession
-
-from backend.domain.models import Book, BookGenre, Status
-from backend.entrypoints.webserver.controllers.books import BooksController
 
 
 @pytest.fixture
@@ -22,13 +21,13 @@ def app(mock_session) -> Litestar:
     # Создаем зависимость для сессии
     async def get_session() -> AsyncGenerator[AsyncSession, None]:
         yield mock_session
-        
+
     # Создаем приложение с нашим контроллером
     app = Litestar(
         route_handlers=[BooksController],
         dependencies={"session": get_session},
     )
-    
+
     return app
 
 
@@ -49,7 +48,7 @@ def test_book():
         pages=250,
         status=Status.TODO,
         created_at=datetime.now(),
-        updated_at=datetime.now()
+        updated_at=datetime.now(),
     )
 
 
@@ -66,7 +65,7 @@ def test_books():
             pages=250,
             status=Status.TODO,
             created_at=datetime.now(),
-            updated_at=datetime.now()
+            updated_at=datetime.now(),
         )
         for i in range(1, 4)
     ]
@@ -78,10 +77,10 @@ async def test_get_books(client: TestClient, mock_session, test_books):
     result = MagicMock()
     result.scalars.return_value.all.return_value = test_books
     mock_session.execute.return_value = result
-    
+
     # Act
     response = client.get("/books")
-    
+
     # Assert
     assert response.status_code == 200
     data = response.json()
@@ -98,12 +97,15 @@ async def test_get_books(client: TestClient, mock_session, test_books):
 async def test_get_books_pagination(client: TestClient, mock_session, test_books):
     # Arrange
     result = MagicMock()
-    result.scalars.return_value.all.side_effect = [test_books[:2], test_books]  # Первый вызов - первые 2 книги, второй - все
+    result.scalars.return_value.all.side_effect = [
+        test_books[:2],
+        test_books,
+    ]  # Первый вызов - первые 2 книги, второй - все
     mock_session.execute.return_value = result
-    
+
     # Act
     response = client.get("/books?offset=0&limit=2")
-    
+
     # Assert
     assert response.status_code == 200
     data = response.json()
@@ -121,10 +123,10 @@ async def test_get_book(client: TestClient, mock_session, test_book):
     result = MagicMock()
     result.scalar_one_or_none.return_value = test_book
     mock_session.execute.return_value = result
-    
+
     # Act
     response = client.get(f"/books/{test_book.id}")
-    
+
     # Assert
     assert response.status_code == 200
     data = response.json()
@@ -144,10 +146,10 @@ async def test_get_book_not_found(client: TestClient, mock_session):
     result = MagicMock()
     result.scalar_one_or_none.return_value = None
     mock_session.execute.return_value = result
-    
+
     # Act
     response = client.get("/books/999")
-    
+
     # Assert
     assert response.status_code == 404
     assert "не найдена" in response.json()["detail"]
@@ -163,17 +165,17 @@ async def test_create_book(client: TestClient, mock_session, test_book):
         "year": test_book.year,
         "language": test_book.language,
         "pages": test_book.pages,
-        "status": test_book.status
+        "status": test_book.status,
     }
-    
+
     # Настраиваем мок для создания книги
     mock_session.add.return_value = test_book
     mock_session.refresh.return_value = test_book
     mock_session.commit.return_value = None
-    
+
     # Act
     response = client.post("/books", json=book_data)
-    
+
     # Assert
     assert response.status_code == 201
     data = response.json()
@@ -194,7 +196,7 @@ async def test_create_book_error(client: TestClient, mock_session):
     # Arrange
     mock_session.commit.side_effect = Exception("Database error")
     mock_session.rollback.return_value = None
-    
+
     book_data = {
         "title": "New Book",
         "author": "New Author",
@@ -202,12 +204,12 @@ async def test_create_book_error(client: TestClient, mock_session):
         "year": 2024,
         "language": "English",
         "pages": 250,
-        "status": Status.TODO.value
+        "status": Status.TODO.value,
     }
-    
+
     # Act
     response = client.post("/books", json=book_data)
-    
+
     # Assert
     assert response.status_code == 500
     assert "Internal Server Error" in response.json()["detail"]
@@ -223,7 +225,7 @@ async def test_update_book(client: TestClient, mock_session, test_book):
     result = MagicMock()
     result.scalar_one_or_none.return_value = test_book
     mock_session.execute.return_value = result
-    
+
     # После обновления возвращаем обновленную книгу
     updated_book = Book(
         id=test_book.id,
@@ -235,17 +237,15 @@ async def test_update_book(client: TestClient, mock_session, test_book):
         pages=test_book.pages,
         status=test_book.status,
         created_at=test_book.created_at,
-        updated_at=test_book.updated_at
+        updated_at=test_book.updated_at,
     )
     mock_session.refresh.return_value = updated_book
-    
-    update_data = {
-        "title": "Updated Title"
-    }
-    
+
+    update_data = {"title": "Updated Title"}
+
     # Act
     response = client.patch(f"/books/{test_book.id}", json=update_data)
-    
+
     # Assert
     assert response.status_code == 200
     data = response.json()
@@ -267,7 +267,7 @@ async def test_update_book_all_fields(client: TestClient, mock_session, test_boo
     result = MagicMock()
     result.scalar_one_or_none.return_value = test_book
     mock_session.execute.return_value = result
-    
+
     # После обновления возвращаем обновленную книгу
     updated_book = Book(
         id=test_book.id,
@@ -279,10 +279,10 @@ async def test_update_book_all_fields(client: TestClient, mock_session, test_boo
         pages=300,
         status=Status.READING,
         created_at=test_book.created_at,
-        updated_at=test_book.updated_at
+        updated_at=test_book.updated_at,
     )
     mock_session.refresh.return_value = updated_book
-    
+
     update_data = {
         "title": "Updated Title",
         "author": "Updated Author",
@@ -290,12 +290,12 @@ async def test_update_book_all_fields(client: TestClient, mock_session, test_boo
         "year": 2025,
         "language": "Russian",
         "pages": 300,
-        "status": Status.READING.value
+        "status": Status.READING.value,
     }
-    
+
     # Act
     response = client.patch(f"/books/{test_book.id}", json=update_data)
-    
+
     # Assert
     assert response.status_code == 200
     data = response.json()
@@ -317,14 +317,12 @@ async def test_update_book_not_found(client: TestClient, mock_session):
     result = MagicMock()
     result.scalar_one_or_none.return_value = None
     mock_session.execute.return_value = result
-    
-    update_data = {
-        "title": "Updated Title"
-    }
-    
+
+    update_data = {"title": "Updated Title"}
+
     # Act
     response = client.patch("/books/999", json=update_data)
-    
+
     # Assert
     assert response.status_code == 404
     assert "не найдена" in response.json()["detail"]
@@ -336,10 +334,10 @@ async def test_delete_book(client: TestClient, mock_session, test_book):
     result = MagicMock()
     result.scalar_one_or_none.return_value = test_book
     mock_session.execute.return_value = result
-    
+
     # Act
     response = client.delete(f"/books/{test_book.id}")
-    
+
     # Assert
     assert response.status_code == 204
     assert mock_session.delete.called
@@ -352,10 +350,10 @@ async def test_delete_book_not_found(client: TestClient, mock_session):
     result = MagicMock()
     result.scalar_one_or_none.return_value = None
     mock_session.execute.return_value = result
-    
+
     # Act
     response = client.delete("/books/999")
-    
+
     # Assert
     assert response.status_code == 404
-    assert "не найдена" in response.json()["detail"] 
+    assert "не найдена" in response.json()["detail"]
