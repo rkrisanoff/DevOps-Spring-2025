@@ -14,7 +14,7 @@ from booker.settings import WebServerConfig
 def create_server(config: WebServerConfig) -> Litestar:
     cors_config = CORSConfig(
         allow_origins=["*"],  # В продакшене следует ограничить
-        allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+        allow_methods=["GET", "POST", "PATCH", "PUT", "DELETE", "OPTIONS"],
         allow_headers=["*"],
     )
 

@@ -1,4 +1,5 @@
 document.addEventListener('DOMContentLoaded', function() {
+        
     const table = document.querySelector('.client-table');
     const searchContainer = document.querySelector('.search-container');
     const toggleTableBtn = document.querySelector('.toggle-table-btn');
@@ -17,18 +18,10 @@ document.addEventListener('DOMContentLoaded', function() {
             searchContainer.style.display = "block";
             updateTableBtn.style.display = 'inline-block'; // Show the update button
             toggleTableBtn.textContent = 'Hide Table'; // Update button text
+            drawTable();
         }
     });
 
-
-    // Add click handlers to table rows
-    const tableRows = document.querySelectorAll('.client-table tbody tr');
-    tableRows.forEach(row => {
-        row.addEventListener('click', function() {
-            const clientName = this.querySelector('.client-name').textContent;
-            alert(`Selected client: ${clientName}`);
-        });
-    });
 
     // Handle Create Form
     const createForm = document.getElementById('createForm');
@@ -45,21 +38,19 @@ document.addEventListener('DOMContentLoaded', function() {
             status: document.getElementById('createStatus').value
         };
 
-        fetch('/create_book/', {
+        fetch(`/create_book/`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
             },
             body: JSON.stringify(formData)
         })
-        .then(response => response.json())
-        .then(data => {
-            if (data.status === 'success') {
-                createForm.reset();
-                alert('Book created successfully!');
-            } else {
-                alert('Error creating book: ' + data.message);
+        .then(response => {
+            if (!response.ok) {
+                throw new Error(`Status: ${response.status}`);
             }
+            createForm.reset();
+            return response.json();
         })
         .catch(error => {
             console.error('Error:', error);
@@ -73,9 +64,11 @@ document.addEventListener('DOMContentLoaded', function() {
     updateForm.addEventListener('submit', function(e) {
         e.preventDefault();
 
+        const updateID = document.getElementById('updateId').value;
+
         // Get all form inputs
         const formData = {
-            id: parseInt(document.getElementById('updateId').value)
+            id: parseInt(updateID)
         };
 
         // Only add fields that have values
@@ -95,27 +88,20 @@ document.addEventListener('DOMContentLoaded', function() {
         if (pages) formData.pages = parseInt(pages);
         if (status) formData.status = status;
 
-        fetch('/update_book/', {
-            method: 'POST',
+
+        fetch(`/update_book/`, {
+            method: 'PATCH',
             headers: {
-                'Content-Type': 'application/json',
+                'Content-Type': 'application/json'
             },
             body: JSON.stringify(formData)
         })
-        .then(response => response.json())
-        .then(data => {
-            if (data.status === 'success') {
-                updateForm.reset();
-                alert('Book updated successfully!');
-                
-                // Optionally display the updated book data
-                if (data.book) {
-                    console.log('Updated book:', data.book);
-                }
-                
-            } else {
-                alert('Error updating book: ' + data.message);
+        .then(response => {
+            if (!response.ok) {
+                throw new Error(`Status: ${response.status}`);
             }
+            updateForm.reset();
+            return response.json();
         })
         .catch(error => {
             console.error('Error:', error);
@@ -123,14 +109,75 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     });
 
-    // Get book form handler
-    const getBookForm = document.getElementById('getBookForm');
-    const bookDetails = document.getElementById('bookDetails');
-    const cleanButton = document.getElementById('cleanBookDetails');
+    // Fill-In in update form 
+    const fillInToUpdateBtn = document.getElementById('fillUpdateForm');
+    fillInToUpdateBtn.addEventListener('click', function() {
+        const bookId = document.getElementById('updateId').value;
+        if (!bookId) {
+            alert('Please enter a book ID first');
+            return;
+        }
 
-    // Function to clean book details
-    function cleanBookDisplay() {
-        // Hide the details container
+        fetch(`/get_book/${bookId}/`)
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error(`Status: ${response.status}`);
+                }
+                return response.json();
+            })
+
+            .then(book => {
+                document.getElementById('updateTitle').value = book.title;
+                document.getElementById('updateAuthor').value = book.author;
+                document.getElementById('updateGenres').value = book.genres.join(', ');
+                document.getElementById('updateYear').value = book.year;
+                document.getElementById('updateLanguage').value = book.language;
+                document.getElementById('updatePages').value = book.pages;
+                document.getElementById('updateStatus').value = book.status;
+                
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('Error fetching book data');
+            });
+    });
+
+
+    // Get book form
+    const getBookForm = document.getElementById('getBookForm');
+    getBookForm.addEventListener('submit', function(e) {
+        e.preventDefault();
+
+        const bookId = document.getElementById('getBookId').value;
+        fetch(`/get_book/${bookId}/`)
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error(`Status: ${response.status}`);
+                }
+                return response.json();
+            })
+            .then(data => {
+                document.getElementById('bookTitle').textContent = data.title;
+                document.getElementById('bookAuthor').textContent = data.author;
+                document.getElementById('bookGenres').textContent = data.genres.join(', ');
+                document.getElementById('bookYear').textContent = data.year;
+                document.getElementById('bookLanguage').textContent = data.language;
+                document.getElementById('bookPages').textContent = data.pages;
+                document.getElementById('bookStatus').textContent = data.status;
+                
+                bookDetails.style.display = 'block';
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert(error)
+            });
+    });
+
+    // Add click handler for clean button
+    const bookDetails = document.getElementById('bookDetails');
+    const cleanBookDetailsField = document.getElementById('cleanBookDetails');
+    cleanBookDetailsField.addEventListener('click', function(e) {
+        e.preventDefault();
         bookDetails.style.display = 'none';
         
         // Clear all the text content
@@ -144,63 +191,31 @@ document.addEventListener('DOMContentLoaded', function() {
         
         // Clear the input field
         document.getElementById('getBookId').value = '';
-
-    }
-
-    // Add click handler for clean button
-    cleanButton.addEventListener('click', cleanBookDisplay);
-
-    // Update the existing get book form handler
-    getBookForm.addEventListener('submit', function(e) {
-        e.preventDefault();
-
-        const bookId = document.getElementById('getBookId').value;
-        
-        fetch(`/get_book/${bookId}/`)
-            .then(response => response.json())
-            .then(data => {
-                if (data.status === 'success') {
-                    // Update the book details display
-                    document.getElementById('bookTitle').textContent = data.book.title;
-                    document.getElementById('bookAuthor').textContent = data.book.author;
-                    document.getElementById('bookGenres').textContent = data.book.genres.join(', ');
-                    document.getElementById('bookYear').textContent = data.book.year;
-                    document.getElementById('bookLanguage').textContent = data.book.language;
-                    document.getElementById('bookPages').textContent = data.book.pages;
-                    document.getElementById('bookStatus').textContent = data.book.status;
-                    
-                    // Show the details container
-                    bookDetails.style.display = 'block';
-                }
-            })
-            .catch(error => {
-                console.error('Error:', error);
-            });
     });
+
+    
 
     // Handle Delete Form
     const deleteForm = document.getElementById('deleteForm');
     deleteForm.addEventListener('submit', function(e) {
         e.preventDefault();
 
-        const bookId = document.getElementById('deleteId').value;
+        const bookId = parseInt(document.getElementById('deleteId').value);
         fetch(`/delete_book/${bookId}/`, {
             method: 'DELETE'
         })
-        .then(response => response.json())
-        .then(data => {
-            if (data.status === 'success') {
-                deleteForm.reset();
-                alert('Book deleted successfully!');
-            } else {
-                alert('Error deleting book: ' + data.message);
+        .then(response => {
+            if (!response.ok) {
+                throw new Error(`Status: ${response.status}`);
             }
+            deleteForm.reset();
         })
         .catch(error => {
             console.error('Error:', error);
-            alert('Error deleting book');
+            alert('Error deleting book ' + error);
         });
     });
+
 
     // Search functionality
     const searchInput = document.getElementById('clientSearch');
@@ -223,10 +238,16 @@ document.addEventListener('DOMContentLoaded', function() {
         const tableBody = document.querySelector('.client-table tbody');
         tableBody.innerHTML = '';
 
-        fetch('/get_books/')
-            .then(response => response.json())
-            .then(books => {
-                books.forEach(book => {
+        fetch(`/get_books/`)
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error(`Status: ${response.status}`);
+                }
+                return response.json();
+            })
+            .then(data => {
+                const items = data.items
+                items.forEach(book => {
                     const row = document.createElement('tr');
                     row.innerHTML = `
                         <td>${book.id}</td>
@@ -246,6 +267,7 @@ document.addEventListener('DOMContentLoaded', function() {
             })
             .catch(error => {
                 console.error('Error fetching book data:', error);
+                alert(error);
             });
     }
 
@@ -255,48 +277,20 @@ document.addEventListener('DOMContentLoaded', function() {
         backendCheckBtn.style.backgroundColor = "grey";
         backendCheckBtn.textContent = `processing...`
         fetch('/backend_health_check/')
-            .then(response => response.json())
-            .then(data => {
-                if (data.status === 'success') {
-                    backendCheckBtn.style.backgroundColor = data.color;
-                    backendCheckBtn.textContent = `Backend: ${data.msg}`
-                } else {
-                    alert('Error: ' + data.message);
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error(`Status: ${response.status}`);
                 }
+                return response.json();
+            })
+            .then(data => {
+                backendCheckBtn.style.backgroundColor = 'green';
+                backendCheckBtn.textContent = `Backend: ${data.version}`
             })
             .catch(error => {
+                backendCheckBtn.style.backgroundColor = 'red';
                 console.error('Error:', error);
                 alert('Error checking backend health');
-            });
-    });
-
-    
-    document.getElementById('fillUpdateForm').addEventListener('click', function() {
-        const bookId = document.getElementById('updateId').value;
-        if (!bookId) {
-            alert('Please enter a book ID first');
-            return;
-        }
-
-        fetch(`/get_book/${bookId}/`)
-            .then(response => response.json())
-            .then(data => {
-                if (data.status === 'success') {
-                    const book = data.book;
-                    document.getElementById('updateTitle').value = book.title;
-                    document.getElementById('updateAuthor').value = book.author;
-                    document.getElementById('updateGenres').value = book.genres.join(', ');
-                    document.getElementById('updateYear').value = book.year;
-                    document.getElementById('updateLanguage').value = book.language;
-                    document.getElementById('updatePages').value = book.pages;
-                    document.getElementById('updateStatus').value = book.status;
-                } else {
-                    alert('Error: ' + data.message);
-                }
-            })
-            .catch(error => {
-                console.error('Error:', error);
-                alert('Error fetching book data');
             });
     });
 
