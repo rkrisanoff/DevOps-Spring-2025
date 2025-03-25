@@ -4,8 +4,10 @@ from . import views
 
 urlpatterns = [
     path("", views.main_screen, name="main_screen"),
-    path("create_client/", views.create_client, name="create_client"),
-    path("update_client/", views.update_client, name="update_client"),
-    path("get_clients/", views.get_clients, name="get_clients"),
+    path("create_book/", views.create_book, name="create_book"),
+    path("update_book/", views.update_book, name="update_book"),
+    path("get_books/", views.get_books, name="get_books"),
+    path("get_book/<int:book_id>/", views.get_book, name="get_book"),
+    path("delete_book/<int:book_id>/", views.delete_book, name="delete_book"),
     path("backend_health_check/", views.backend_health_check, name="backend_health_check"),
 ]

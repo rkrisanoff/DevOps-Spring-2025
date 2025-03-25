@@ -1,5 +1,4 @@
 import json
-from datetime import datetime
 
 import requests
 from django.http import JsonResponse
@@ -7,71 +6,79 @@ from django.shortcuts import render
 from django.views.decorators.csrf import csrf_exempt
 from requests.adapters import HTTPAdapter
 
-from .models import Client
+from .models import Book, BookGenre
 
-# Список клиентов (вне БД, для демо)
-clients_data = [
+# Sample books data (for demo)
+books_data = [
     {
-        "name": "John Doe",
-        "quantity": 5,
-        "created_at": "2024-03-20 10:30:00",
-        "updated_at": "2024-03-20 10:30:00",
         "id": 1,
+        "title": "The Great Gatsby",
+        "author": "F. Scott Fitzgerald",
+        "genres": [BookGenre.FICTION],
+        "year": 1925,
+        "language": "English",
+        "pages": 180,
+        "status": "available"
     },
     {
-        "name": "Jane Smith",
-        "quantity": 3,
-        "created_at": "2024-03-20 11:15:00",
-        "updated_at": "2024-03-20 11:15:00",
         "id": 2,
-    },
+        "title": "1984",
+        "author": "George Orwell",
+        "genres": [BookGenre.FICTION, BookGenre.SCIENCE_FICTION],
+        "year": 1949,
+        "language": "English",
+        "pages": 328,
+        "status": "available"
+    }
 ]
 next_id = 3
 
 
 @csrf_exempt
 def main_screen(request):
-    # по умолчанию клииенты все равно рендерятся в таблице,
-    # чтобы при начале работы таблица содержала значения
-    memory_clients = [
-        Client(
-            id=client["id"],
-            name=client["name"],
-            quantity=client["quantity"],
-            created_at=datetime.strptime(client["created_at"], "%Y-%m-%d %H:%M:%S"),
-            updated_at=datetime.strptime(client["updated_at"], "%Y-%m-%d %H:%M:%S"),
+    memory_books = [
+        Book(
+            id=book["id"],
+            title=book["title"],
+            author=book["author"],
+            genres=book["genres"],
+            year=book["year"],
+            language=book["language"],
+            pages=book["pages"],
+            status=book["status"]
         )
-        for client in clients_data
+        for book in books_data
     ]
-    context = {"clients": memory_clients}
+    context = {"books": memory_books}
     return render(request, "simple.html", context)
 
 
 @csrf_exempt
-def create_client(request):
+def create_book(request):
     if request.method == "POST":
         try:
             global next_id
             data = json.loads(request.body)
-            print(data)
-            current_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-
-            new_client = {
+            
+            new_book = {
                 "id": next_id,
-                "name": data["name"],
-                "quantity": data["quantity"],
-                "created_at": current_time,
-                "updated_at": current_time,
+                "title": data["title"],
+                "author": data["author"],
+                "genres": [BookGenre(genre) for genre in data["genres"]],
+                "year": data["year"],
+                "language": data["language"],
+                "pages": data["pages"],
+                "status": data["status"]
             }
 
-            clients_data.append(new_client)
+            books_data.append(new_book)
             next_id += 1
 
             return JsonResponse(
                 {
                     "status": "success",
-                    "message": "Client created successfully",
-                    "id": new_client["id"],
+                    "message": "Book created successfully",
+                    "id": new_book["id"],
                 }
             )
         except Exception as e:
@@ -80,31 +87,79 @@ def create_client(request):
 
 
 @csrf_exempt
-def update_client(request):
+def update_book(request):
     if request.method == "POST":
         try:
             data = json.loads(request.body)
-            client_id = data["id"]
+            book_id = data["id"]
 
-            # Find client in our list
-            for client in clients_data:
-                if client["id"] == client_id:
-                    client["name"] = data["name"]
-                    client["quantity"] = data["quantity"]
-                    client["updated_at"] = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-                    return JsonResponse(
-                        {"status": "success", "message": "Client updated successfully"}
-                    )
+            # Find book in our list
+            for book in books_data:
+                if book["id"] == book_id:
+                    # Only update fields that are present in the request data
+                    if "title" in data and data["title"]:
+                        book["title"] = data["title"]
+                    if "author" in data and data["author"]:
+                        book["author"] = data["author"]
+                    if "genres" in data and data["genres"]:
+                        book["genres"] = [BookGenre(genre) for genre in data["genres"]]
+                    if "year" in data and data["year"]:
+                        book["year"] = data["year"]
+                    if "language" in data and data["language"]:
+                        book["language"] = data["language"]
+                    if "pages" in data and data["pages"]:
+                        book["pages"] = data["pages"]
+                    if "status" in data and data["status"]:
+                        book["status"] = data["status"]
+                    
+                    return JsonResponse({
+                        "status": "success",
+                        "message": "Book updated successfully",
+                        "book": book  # Return the updated book data
+                    })
 
-            return JsonResponse({"status": "error", "message": "Client not found"}, status=404)
+            return JsonResponse({"status": "error", "message": "Book not found"}, status=404)
         except Exception as e:
             return JsonResponse({"status": "error", "message": str(e)}, status=400)
     return JsonResponse({"status": "error", "message": "Invalid request method"}, status=405)
 
 
-def get_clients(request):
+def get_books(request):
     if request.method == "GET":
-        return JsonResponse(clients_data, safe=False)
+        return JsonResponse(books_data, safe=False)
+
+
+@csrf_exempt
+def get_book(request, book_id):
+    if request.method == "GET":
+        try:
+            for book in books_data:
+                if book["id"] == book_id:
+                    return JsonResponse({
+                        "status": "success",
+                        "book": book
+                    })
+            return JsonResponse({"status": "error", "message": "Book not found"}, status=404)
+        except Exception as e:
+            return JsonResponse({"status": "error", "message": str(e)}, status=400)
+    return JsonResponse({"status": "error", "message": "Invalid request method"}, status=405)
+
+
+@csrf_exempt
+def delete_book(request, book_id):
+    if request.method == "DELETE":
+        try:
+            for i, book in enumerate(books_data):
+                if book["id"] == book_id:
+                    books_data.pop(i)
+                    return JsonResponse({
+                        "status": "success",
+                        "message": "Book deleted successfully"
+                    })
+            return JsonResponse({"status": "error", "message": "Book not found"}, status=404)
+        except Exception as e:
+            return JsonResponse({"status": "error", "message": str(e)}, status=400)
+    return JsonResponse({"status": "error", "message": "Invalid request method"}, status=405)
 
 
 @csrf_exempt
