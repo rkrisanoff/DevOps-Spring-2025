@@ -22,15 +22,15 @@ def main_screen(request):
 def create_book(request):
     if request.method == "POST":
         try:
-            data = json.loads(request.body.decode('utf-8'))
-            response = requests.post(f'http://{BACKEND_URL}:{BACKEND_PORT}/api/books', json=data)
+            data = json.loads(request.body.decode("utf-8"))
+            response = requests.post(f"http://{BACKEND_URL}:{BACKEND_PORT}/api/books", json=data)
             if response.status_code == 200:
                 result = response.json()
                 return JsonResponse(result)
             else:
                 return JsonResponse({}, status=response.status_code)
         except requests.RequestException as e:
-            return JsonResponse({'error': str(e)}, status=500)
+            return JsonResponse({"error": str(e)}, status=500)
     return JsonResponse({"status": "error", "message": "Invalid request method"}, status=405)
 
 
@@ -38,10 +38,9 @@ def create_book(request):
 def update_book(request):
     if request.method == "PATCH":
         try:
-            data = json.loads(request.body.decode('utf-8'))
+            data = json.loads(request.body.decode("utf-8"))
             response = requests.patch(
-                f'http://{BACKEND_URL}:{BACKEND_PORT}/api/books/{data["id"]}', 
-                json=data
+                f"http://{BACKEND_URL}:{BACKEND_PORT}/api/books/{data['id']}", json=data
             )
             if response.status_code == 200:
                 result = response.json()
@@ -49,7 +48,7 @@ def update_book(request):
             else:
                 return JsonResponse({}, status=response.status_code)
         except requests.RequestException as e:
-            return JsonResponse({'error': str(e)}, status=500)
+            return JsonResponse({"error": str(e)}, status=500)
     return JsonResponse({"status": "error", "message": "Invalid request method"}, status=405)
 
 
@@ -89,10 +88,10 @@ def get_book(request, book_id):
 def delete_book(request, book_id):
     if request.method == "DELETE":
         try:
-            response = requests.delete(f'http://{BACKEND_URL}:{BACKEND_PORT}/api/books/{book_id}')
+            response = requests.delete(f"http://{BACKEND_URL}:{BACKEND_PORT}/api/books/{book_id}")
             return JsonResponse({}, status=response.status_code)
         except requests.RequestException as e:
-            return JsonResponse({'error': str(e)}, status=500)
+            return JsonResponse({"error": str(e)}, status=500)
     return JsonResponse({"status": "error", "message": "Invalid request method"}, status=405)
 
 

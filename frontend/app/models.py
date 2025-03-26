@@ -37,12 +37,7 @@ class Book(models.Model):
     year = models.IntegerField()
     language = models.CharField(max_length=50)
     pages = models.IntegerField()
-    status = models.CharField(
-        max_length=50,
-        choices=Status.choices,
-        default=Status.TODO
-    )
+    status = models.CharField(max_length=50, choices=Status.choices, default=Status.TODO)
 
     def __str__(self):
         return f"Book(id={self.id}, title={self.title}, author={self.author})"
-

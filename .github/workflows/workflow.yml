@@ -34,3 +34,21 @@ jobs:
         run: |
           cd backend/
           uv run pytest --cov tests/ -v
+
+  frontend-tests:
+    needs: [linting]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install node & npm to launch javascript tests
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Install all necessary packages
+        run: |
+          cd frontend/tests
+          npm install
+      - name: Run tests
+        run: |
+          cd frontend/tests
+          npm test

@@ -1,12 +1,44 @@
-document.addEventListener('DOMContentLoaded', function() {
-        
-    const table = document.querySelector('.client-table');
-    const searchContainer = document.querySelector('.search-container');
-    const toggleTableBtn = document.querySelector('.toggle-table-btn');
-    const updateTableBtn = document.querySelector('.update-table-btn');
+// Export functions for testing
+function drawTable() {
+    const tableBody = document.querySelector('.client-table tbody');
+    tableBody.innerHTML = '';
 
+    fetch(`/get_books/`)
+        .then(response => {
+            if (!response.ok) {
+                throw new Error(`Status: ${response.status}`);
+            }
+            return response.json();
+        })
+        .then(data => {
+            const items = data.items
+            items.forEach(book => {
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td>${book.id}</td>
+                    <td class="book-title">${book.title}</td>
+                    <td>${book.author}</td>
+                    <td>${book.genres.join(', ')}</td>
+                    <td>${book.year}</td>
+                    <td>${book.language}</td>
+                    <td>${book.pages}</td>
+                    <td>${book.status}</td>
+                `;
+                tableBody.appendChild(row);
+            });
 
-    // Event listener for toggling the table visibility
+            const table = document.querySelector('.client-table');
+            const searchContainer = document.querySelector('.search-container');
+            table.style.display = 'table';
+            searchContainer.style.display = 'block';
+        })
+        .catch(error => {
+            console.error('Error fetching book data:', error);
+            alert(error);
+        });
+}
+
+function initializeTableToggle(table, searchContainer, updateTableBtn, toggleTableBtn, mockDrawTable = drawTable) {
     toggleTableBtn.addEventListener('click', function() {
         if (table.style.display === 'table') {
             table.style.display = 'none'; // Hide the table
@@ -18,10 +50,71 @@ document.addEventListener('DOMContentLoaded', function() {
             searchContainer.style.display = "block";
             updateTableBtn.style.display = 'inline-block'; // Show the update button
             toggleTableBtn.textContent = 'Hide Table'; // Update button text
-            drawTable();
+            mockDrawTable();
         }
     });
+}
 
+function initializeSearchFunctionality(searchInput) {
+    searchInput.addEventListener('input', function() {
+        const searchText = this.value.toLowerCase();
+        const tableRows = document.querySelectorAll('.client-table tbody tr');
+        tableRows.forEach(row => {
+            const title = row.querySelector('.book-title').textContent.toLowerCase();
+            row.style.display = title.includes(searchText) ? '' : 'none';
+        });
+    });
+}
+
+function initializeBackendCheck(backendCheckBtn) {
+    backendCheckBtn.addEventListener('click', function() {
+        backendCheckBtn.style.backgroundColor = "grey";
+        backendCheckBtn.textContent = "processing...";
+        fetch('/backend_health_check/')
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error(`Status: ${response.status}`);
+                }
+                return response.json();
+            })
+            .then(data => {
+                backendCheckBtn.style.backgroundColor = 'green';
+                backendCheckBtn.textContent = `Backend: ${data.version}`;
+            })
+            .catch(error => {
+                backendCheckBtn.style.backgroundColor = 'red';
+                console.error('Error:', error);
+                alert('Error checking backend health');
+            });
+    });
+}
+
+// Export for testing
+if (typeof module !== 'undefined' && module.exports) {
+    module.exports = {
+        initializeTableToggle,
+        drawTable,
+        initializeSearchFunctionality,
+        initializeBackendCheck
+    };
+}
+
+// Main initialization
+document.addEventListener('DOMContentLoaded', function() {
+    const table = document.querySelector('.client-table');
+    const searchContainer = document.querySelector('.search-container');
+    const toggleTableBtn = document.querySelector('.toggle-table-btn');
+    const updateTableBtn = document.querySelector('.update-table-btn');
+    const searchInput = document.getElementById('clientSearch');
+    const backendCheckBtn = document.getElementById('backendCheckBtn');
+
+    initializeTableToggle(table, searchContainer, updateTableBtn, toggleTableBtn);
+    if (searchInput) {
+        initializeSearchFunctionality(searchInput);
+    }
+    if (backendCheckBtn) {
+        initializeBackendCheck(backendCheckBtn);
+    }
 
     // Handle Create Form
     const createForm = document.getElementById('createForm');
@@ -109,7 +202,7 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     });
 
-    // Fill-In in update form 
+    // Fill-In in update form
     const fillInToUpdateBtn = document.getElementById('fillUpdateForm');
     fillInToUpdateBtn.addEventListener('click', function() {
         const bookId = document.getElementById('updateId').value;
@@ -134,7 +227,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 document.getElementById('updateLanguage').value = book.language;
                 document.getElementById('updatePages').value = book.pages;
                 document.getElementById('updateStatus').value = book.status;
-                
+
             })
             .catch(error => {
                 console.error('Error:', error);
@@ -164,7 +257,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 document.getElementById('bookLanguage').textContent = data.language;
                 document.getElementById('bookPages').textContent = data.pages;
                 document.getElementById('bookStatus').textContent = data.status;
-                
+
                 bookDetails.style.display = 'block';
             })
             .catch(error => {
@@ -179,7 +272,7 @@ document.addEventListener('DOMContentLoaded', function() {
     cleanBookDetailsField.addEventListener('click', function(e) {
         e.preventDefault();
         bookDetails.style.display = 'none';
-        
+
         // Clear all the text content
         document.getElementById('bookTitle').textContent = '';
         document.getElementById('bookAuthor').textContent = '';
@@ -188,12 +281,12 @@ document.addEventListener('DOMContentLoaded', function() {
         document.getElementById('bookLanguage').textContent = '';
         document.getElementById('bookPages').textContent = '';
         document.getElementById('bookStatus').textContent = '';
-        
+
         // Clear the input field
         document.getElementById('getBookId').value = '';
     });
 
-    
+
 
     // Handle Delete Form
     const deleteForm = document.getElementById('deleteForm');
@@ -217,81 +310,10 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 
 
-    // Search functionality
-    const searchInput = document.getElementById('clientSearch');
-    if (searchInput) {
-        searchInput.addEventListener('input', function() {
-            const searchText = this.value.toLowerCase();
-            const tableRows = document.querySelectorAll('.client-table tbody tr');
-            tableRows.forEach(row => {
-                const title = row.querySelector('.book-title').textContent.toLowerCase();
-                row.style.display = title.includes(searchText) ? '' : 'none';
-            });
-        });
-    }
 
     updateTableBtn.addEventListener('click', function() {
         drawTable();
     });
 
-    function drawTable() {
-        const tableBody = document.querySelector('.client-table tbody');
-        tableBody.innerHTML = '';
-
-        fetch(`/get_books/`)
-            .then(response => {
-                if (!response.ok) {
-                    throw new Error(`Status: ${response.status}`);
-                }
-                return response.json();
-            })
-            .then(data => {
-                const items = data.items
-                items.forEach(book => {
-                    const row = document.createElement('tr');
-                    row.innerHTML = `
-                        <td>${book.id}</td>
-                        <td class="book-title">${book.title}</td>
-                        <td>${book.author}</td>
-                        <td>${book.genres.join(', ')}</td>
-                        <td>${book.year}</td>
-                        <td>${book.language}</td>
-                        <td>${book.pages}</td>
-                        <td>${book.status}</td>
-                    `;
-                    tableBody.appendChild(row);
-                });
-
-                table.style.display = 'table';
-                searchContainer.style.display = 'block';
-            })
-            .catch(error => {
-                console.error('Error fetching book data:', error);
-                alert(error);
-            });
-    }
-
-
-    const backendCheckBtn = document.getElementById('backendCheckBtn');
-    backendCheckBtn.addEventListener('click', function() {
-        backendCheckBtn.style.backgroundColor = "grey";
-        backendCheckBtn.textContent = `processing...`
-        fetch('/backend_health_check/')
-            .then(response => {
-                if (!response.ok) {
-                    throw new Error(`Status: ${response.status}`);
-                }
-                return response.json();
-            })
-            .then(data => {
-                backendCheckBtn.style.backgroundColor = 'green';
-                backendCheckBtn.textContent = `Backend: ${data.version}`
-            })
-            .catch(error => {
-                backendCheckBtn.style.backgroundColor = 'red';
-                console.error('Error:', error);
-                alert('Error checking backend health');
-            });
-    });
 
 });
