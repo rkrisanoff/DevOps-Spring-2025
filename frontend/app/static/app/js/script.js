@@ -1,4 +1,3 @@
-// Export functions for testing
 function drawTable() {
     const tableBody = document.querySelector('.client-table tbody');
     tableBody.innerHTML = '';
@@ -89,35 +88,39 @@ function initializeBackendCheck(backendCheckBtn) {
     });
 }
 
-// Export for testing
-if (typeof module !== 'undefined' && module.exports) {
-    module.exports = {
-        initializeTableToggle,
-        drawTable,
-        initializeSearchFunctionality,
-        initializeBackendCheck
-    };
+function initializeGetBookForm(getBookForm) {
+    getBookForm.addEventListener('submit', function(e) {
+        e.preventDefault();
+
+        const bookId = document.getElementById('getBookId').value;
+        const bookDetails = document.getElementById('bookDetails');
+
+        fetch(`/get_book/${bookId}/`)
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error(`Status: ${response.status}`);
+                }
+                return response.json();
+            })
+            .then(data => {
+                document.getElementById('bookTitle').textContent = data.title;
+                document.getElementById('bookAuthor').textContent = data.author;
+                document.getElementById('bookGenres').textContent = data.genres.join(', ');
+                document.getElementById('bookYear').textContent = data.year;
+                document.getElementById('bookLanguage').textContent = data.language;
+                document.getElementById('bookPages').textContent = data.pages;
+                document.getElementById('bookStatus').textContent = data.status;
+
+                bookDetails.style.display = 'block';
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert(error);
+            });
+    });
 }
 
-// Main initialization
-document.addEventListener('DOMContentLoaded', function() {
-    const table = document.querySelector('.client-table');
-    const searchContainer = document.querySelector('.search-container');
-    const toggleTableBtn = document.querySelector('.toggle-table-btn');
-    const updateTableBtn = document.querySelector('.update-table-btn');
-    const searchInput = document.getElementById('clientSearch');
-    const backendCheckBtn = document.getElementById('backendCheckBtn');
-
-    initializeTableToggle(table, searchContainer, updateTableBtn, toggleTableBtn);
-    if (searchInput) {
-        initializeSearchFunctionality(searchInput);
-    }
-    if (backendCheckBtn) {
-        initializeBackendCheck(backendCheckBtn);
-    }
-
-    // Handle Create Form
-    const createForm = document.getElementById('createForm');
+function initializeCreateForm(createForm) {
     createForm.addEventListener('submit', function(e) {
         e.preventDefault();
 
@@ -131,7 +134,7 @@ document.addEventListener('DOMContentLoaded', function() {
             status: document.getElementById('createStatus').value
         };
 
-        fetch(`/create_book/`, {
+        fetch('/create_book/', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
@@ -150,16 +153,13 @@ document.addEventListener('DOMContentLoaded', function() {
             alert('Error creating book');
         });
     });
+}
 
-
-    // Handle Update Form
-    const updateForm = document.getElementById('updateForm');
+function initializeUpdateForm(updateForm) {
     updateForm.addEventListener('submit', function(e) {
         e.preventDefault();
 
         const updateID = document.getElementById('updateId').value;
-
-        // Get all form inputs
         const formData = {
             id: parseInt(updateID)
         };
@@ -181,8 +181,7 @@ document.addEventListener('DOMContentLoaded', function() {
         if (pages) formData.pages = parseInt(pages);
         if (status) formData.status = status;
 
-
-        fetch(`/update_book/`, {
+        fetch('/update_book/', {
             method: 'PATCH',
             headers: {
                 'Content-Type': 'application/json'
@@ -201,9 +200,9 @@ document.addEventListener('DOMContentLoaded', function() {
             alert('Error updating book');
         });
     });
+}
 
-    // Fill-In in update form
-    const fillInToUpdateBtn = document.getElementById('fillUpdateForm');
+function initializeFillUpdateForm(fillInToUpdateBtn) {
     fillInToUpdateBtn.addEventListener('click', function() {
         const bookId = document.getElementById('updateId').value;
         if (!bookId) {
@@ -218,7 +217,6 @@ document.addEventListener('DOMContentLoaded', function() {
                 }
                 return response.json();
             })
-
             .then(book => {
                 document.getElementById('updateTitle').value = book.title;
                 document.getElementById('updateAuthor').value = book.author;
@@ -227,69 +225,15 @@ document.addEventListener('DOMContentLoaded', function() {
                 document.getElementById('updateLanguage').value = book.language;
                 document.getElementById('updatePages').value = book.pages;
                 document.getElementById('updateStatus').value = book.status;
-
             })
             .catch(error => {
                 console.error('Error:', error);
                 alert('Error fetching book data');
             });
     });
+}
 
-
-    // Get book form
-    const getBookForm = document.getElementById('getBookForm');
-    getBookForm.addEventListener('submit', function(e) {
-        e.preventDefault();
-
-        const bookId = document.getElementById('getBookId').value;
-        fetch(`/get_book/${bookId}/`)
-            .then(response => {
-                if (!response.ok) {
-                    throw new Error(`Status: ${response.status}`);
-                }
-                return response.json();
-            })
-            .then(data => {
-                document.getElementById('bookTitle').textContent = data.title;
-                document.getElementById('bookAuthor').textContent = data.author;
-                document.getElementById('bookGenres').textContent = data.genres.join(', ');
-                document.getElementById('bookYear').textContent = data.year;
-                document.getElementById('bookLanguage').textContent = data.language;
-                document.getElementById('bookPages').textContent = data.pages;
-                document.getElementById('bookStatus').textContent = data.status;
-
-                bookDetails.style.display = 'block';
-            })
-            .catch(error => {
-                console.error('Error:', error);
-                alert(error)
-            });
-    });
-
-    // Add click handler for clean button
-    const bookDetails = document.getElementById('bookDetails');
-    const cleanBookDetailsField = document.getElementById('cleanBookDetails');
-    cleanBookDetailsField.addEventListener('click', function(e) {
-        e.preventDefault();
-        bookDetails.style.display = 'none';
-
-        // Clear all the text content
-        document.getElementById('bookTitle').textContent = '';
-        document.getElementById('bookAuthor').textContent = '';
-        document.getElementById('bookGenres').textContent = '';
-        document.getElementById('bookYear').textContent = '';
-        document.getElementById('bookLanguage').textContent = '';
-        document.getElementById('bookPages').textContent = '';
-        document.getElementById('bookStatus').textContent = '';
-
-        // Clear the input field
-        document.getElementById('getBookId').value = '';
-    });
-
-
-
-    // Handle Delete Form
-    const deleteForm = document.getElementById('deleteForm');
+function initializeDeleteForm(deleteForm) {
     deleteForm.addEventListener('submit', function(e) {
         e.preventDefault();
 
@@ -308,12 +252,83 @@ document.addEventListener('DOMContentLoaded', function() {
             alert('Error deleting book ' + error);
         });
     });
+}
 
+function initializeCleanButton(cleanButton) {
+    cleanButton.addEventListener('click', function(e) {
+        e.preventDefault();
+        const bookDetails = document.getElementById('bookDetails');
+        bookDetails.style.display = 'none';
 
+        // Clear all the text content
+        document.getElementById('bookTitle').textContent = '';
+        document.getElementById('bookAuthor').textContent = '';
+        document.getElementById('bookGenres').textContent = '';
+        document.getElementById('bookYear').textContent = '';
+        document.getElementById('bookLanguage').textContent = '';
+        document.getElementById('bookPages').textContent = '';
+        document.getElementById('bookStatus').textContent = '';
+
+        // Clear the input field
+        document.getElementById('getBookId').value = '';
+    });
+}
+
+// Export for testing
+if (typeof module !== 'undefined' && module.exports) {
+    module.exports = {
+        initializeTableToggle,
+        drawTable,
+        initializeSearchFunctionality,
+        initializeBackendCheck,
+        initializeGetBookForm,
+        initializeCreateForm,
+        initializeUpdateForm,
+        initializeFillUpdateForm,
+        initializeDeleteForm,
+        initializeCleanButton
+    };
+}
+
+// Main initialization
+document.addEventListener('DOMContentLoaded', function() {
+    const table = document.querySelector('.client-table');
+    const searchContainer = document.querySelector('.search-container');
+    const toggleTableBtn = document.querySelector('.toggle-table-btn');
+    const updateTableBtn = document.querySelector('.update-table-btn');
+    initializeTableToggle(table, searchContainer, updateTableBtn, toggleTableBtn);
+
+    const searchInput = document.getElementById('clientSearch');
+    initializeSearchFunctionality(searchInput);
+
+    const backendCheckBtn = document.getElementById('backendCheckBtn');
+    initializeBackendCheck(backendCheckBtn);
+
+    // Handle Create Form
+    const createForm = document.getElementById('createForm');
+    initializeCreateForm(createForm);
+
+    // Handle Update Form
+    const updateForm = document.getElementById('updateForm');
+    initializeUpdateForm(updateForm);
+
+    // Fill-In in update form
+    const fillInToUpdateBtn = document.getElementById('fillUpdateForm');
+    initializeFillUpdateForm(fillInToUpdateBtn);
+
+    // Get book form
+    const getBookForm = document.getElementById('getBookForm');
+    initializeGetBookForm(getBookForm);
+
+    // Add click handler for clean button
+    const cleanBookDetailsField = document.getElementById('cleanBookDetails');
+    initializeCleanButton(cleanBookDetailsField);
+
+    // Handle Delete Form
+    const deleteForm = document.getElementById('deleteForm');
+    initializeDeleteForm(deleteForm);
 
     updateTableBtn.addEventListener('click', function() {
         drawTable();
     });
-
-
 });
