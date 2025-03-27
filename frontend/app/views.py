@@ -113,3 +113,8 @@ def backend_health_check(request):
             return JsonResponse({}, status=500)
 
     return JsonResponse({}, status=405)
+
+
+@csrf_exempt
+def frontend_health_check(request):
+    return JsonResponse({"version": "0.1.0"}, status=200)
