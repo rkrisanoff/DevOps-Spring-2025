@@ -1,0 +1,74 @@
+name: Code Clean-up
+run-name:  Clean up push action at ${{ github.ref }}
+on: [push]
+jobs:
+  checking:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install the latest version of uv
+        uses: astral-sh/setup-uv@v5
+      - name: Setup libraries
+        run: |
+          cd frontend/
+          uv sync
+          uv pip install --editable .[dev]
+      - name: Run Ruff linter
+        run: |
+          cd backend/
+          uv run pre-commit run --all-files
+
+  build-frontend:
+    needs: [checking]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install the latest version of uv
+        uses: astral-sh/setup-uv@v5
+      - name: Setup libraries
+        run: |
+          cd frontend/
+          uv sync
+          uv pip install --editable .
+      - name: Run frontned
+        run: |
+          cd frontend/
+          uv run python manage.py runserver 0.0.0.0:8005 &
+      - name: Проверка демона
+        run: |
+          sleep 5
+          curl -f http://localhost:8005/frontend_health_check/  # Проверка доступности
+  test-frontend:
+    needs: [build-frontend]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install node & npm to launch javascript tests
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Install all necessary packages
+        run: |
+          cd frontend/tests
+          npm install
+      - name: Run tests
+        run: |
+          cd frontend/tests
+          npm test
+
+  backend-tests:
+    needs: [checking]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install the latest version of uv
+        uses: astral-sh/setup-uv@v5
+      - name: Setup libraries
+        run: |
+          cd backend/
+          uv sync
+          uv pip install --editable '.[dev]'
+      - name: Run Backend Tests
+        run: |
+          cd backend/
+          uv run pytest --cov tests/ -v

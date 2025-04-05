@@ -1,0 +1,173 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <title>App</title>
+    <!-- Add CSS -->
+    <link rel="stylesheet" href="{% static 'app/css/styles.css' %}">
+    <link rel="shortcut icon" type="image/png" href="{% static 'icon.png' %}" >
+</head>
+<body>
+    <h1>Book Database</h1>
+    <button class="health-check-button" id="backendCheckBtn">Backend Status</button>
+
+    <!-- Create and Update Forms in Columns -->
+    <div class="form-container">
+        <div class="form-column">
+            <h2>Create New Book</h2>
+            <form id="createForm" method="post">
+                <div>
+                    <label for="createTitle">Title:</label>
+                    <input type="text" id="createTitle" name="createTitle" required>
+                </div>
+                <div>
+                    <label for="createAuthor">Author:</label>
+                    <input type="text" id="createAuthor" name="createAuthor" required>
+                </div>
+                <div>
+                    <label for="createGenres">Genres:</label>
+                    <input type="text" id="createGenres" name="createGenres" required placeholder="Comma-separated genres">
+                </div>
+                <div>
+                    <label for="createYear">Year:</label>
+                    <input type="number" id="createYear" name="createYear" required>
+                </div>
+                <div>
+                    <label for="createLanguage">Language:</label>
+                    <input type="text" id="createLanguage" name="createLanguage" required>
+                </div>
+                <div>
+                    <label for="createPages">Pages:</label>
+                    <input type="number" id="createPages" name="createPages" required>
+                </div>
+                <div>
+                    <label for="createStatus">Status:</label>
+                    <input type="text" id="createStatus" name="createStatus" required>
+                </div>
+                <button type="submit" name="action" value="create">Create New Book</button>
+            </form>
+        </div>
+
+        <div class="form-column">
+            <h2>Update Book</h2>
+            <form id="updateForm" method="post">
+                <div>
+                    <label for="updateId">ID:</label>
+                    <div class="id-input-group">
+                        <input type="number" id="updateId" name="updateId" required>
+                        <button type="button" id="fillUpdateForm" class="fill-button">Get Book Data</button>
+                    </div>
+                </div>
+                <div>
+                    <label for="updateTitle">Title:</label>
+                    <input type="text" id="updateTitle" name="updateTitle">
+                </div>
+                <div>
+                    <label for="updateAuthor">Author:</label>
+                    <input type="text" id="updateAuthor" name="updateAuthor">
+                </div>
+                <div>
+                    <label for="updateGenres">Genres:</label>
+                    <input type="text" id="updateGenres" name="updateGenres" placeholder="Comma-separated genres">
+                </div>
+                <div>
+                    <label for="updateYear">Year:</label>
+                    <input type="number" id="updateYear" name="updateYear">
+                </div>
+                <div>
+                    <label for="updateLanguage">Language:</label>
+                    <input type="text" id="updateLanguage" name="updateLanguage">
+                </div>
+                <div>
+                    <label for="updatePages">Pages:</label>
+                    <input type="number" id="updatePages" name="updatePages">
+                </div>
+                <div>
+                    <label for="updateStatus">Status:</label>
+                    <input type="text" id="updateStatus" name="updateStatus">
+                </div>
+                <button type="submit">Update Book</button>
+            </form>
+        </div>
+
+        <div class="form-column">
+            <h2>Get Book by ID</h2>
+            <form id="getBookForm" method="get">
+                <div>
+                    <label for="getBookId">Book ID:</label>
+                    <input type="number" id="getBookId" name="getBookId" required>
+                </div>
+                <div class="form-buttons">
+                    <button type="submit">Get Book</button>
+                    <button type="button" id="cleanBookDetails" class="clean-button">Clean</button>
+                </div>
+            </form>
+            <div id="bookDetails" class="book-details-container" style="display: none;">
+                <h3>Book Details</h3>
+                <div class="book-info">
+                    <p><strong>Title:</strong> <span id="bookTitle"></span></p>
+                    <p><strong>Author:</strong> <span id="bookAuthor"></span></p>
+                    <p><strong>Genres:</strong> <span id="bookGenres"></span></p>
+                    <p><strong>Year:</strong> <span id="bookYear"></span></p>
+                    <p><strong>Language:</strong> <span id="bookLanguage"></span></p>
+                    <p><strong>Pages:</strong> <span id="bookPages"></span></p>
+                    <p><strong>Status:</strong> <span id="bookStatus"></span></p>
+                </div>
+            </div>
+        </div>
+
+        <div class="form-column">
+            <h2>Delete Book</h2>
+            <form id="deleteForm" method="post">
+                <div>
+                    <label for="deleteId">Book ID:</label>
+                    <input type="number" id="deleteId" name="deleteId" required>
+                </div>
+                <button type="submit" name="action" value="delete">Delete Book</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Add button to show/hide table -->
+    <button class="toggle-table-btn">Show Table</button>
+    <button class="update-table-btn">Update Table</button>
+
+    <!-- Add search input -->
+    <div class="search-container">
+        <input type="text" id="clientSearch" placeholder="Search by book title...">
+    </div>
+
+    <table class="client-table">
+        <thead>
+            <tr>
+                <th>ID</th>
+                <th>Title</th>
+                <th>Author</th>
+                <th>Genres</th>
+                <th>Year</th>
+                <th>Language</th>
+                <th>Pages</th>
+                <th>Status</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for book in books %}
+            <tr>
+                <td>{{ book.id }}</td>
+                <td class="book-title">{{ book.title }}</td>
+                <td>{{ book.author }}</td>
+                <td>{{ book.genres|join:", " }}</td>
+                <td>{{ book.year }}</td>
+                <td>{{ book.language }}</td>
+                <td>{{ book.pages }}</td>
+                <td>{{ book.status }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+    <!-- Add JavaScript -->
+    <script src="{% static 'app/js/script.js' %}"></script>
+</body>
+</html>
