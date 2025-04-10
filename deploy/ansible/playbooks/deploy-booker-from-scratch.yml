@@ -27,6 +27,6 @@
 
   - name: deploy via docker-compose
     community.docker.docker_compose_v2:
-      project_src: "{{lookup('ansible.builtin.env', 'DEST_FOLDER')}}/DevOps-Spring-2025-0.2.4/"
+      project_src: "{{lookup('ansible.builtin.env', 'DEST_FOLDER')}}/DevOps-Spring-2025-{{lookup('ansible.builtin.env', 'APP_TAG_VERSION')}}/"
       files:
       - compose.yml
