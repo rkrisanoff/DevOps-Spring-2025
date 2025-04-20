@@ -2,11 +2,11 @@
 # vi: set ft=ruby :vagr
 
 Vagrant.configure("2") do |config|
-  config.vm.box = "ubuntu_clean" # jammy-server-cloudimg-amd64-vagrant.box
+  config.vm.box = "ubuntu_vm" # jammy-server-cloudimg-amd64-vagrant.box
 
 
   config.vm.network "forwarded_port", id: "ssh", host: 2022, guest: 22
-  config.vm.network "public_network", bridge: "Intel(R) Wi-Fi 6 AX201 160MHz", ip: "192.168.0.16"
+  config.vm.network "public_network", bridge: "wlo1", ip: "192.168.0.16" # bridge: add bridge interface specific for your device
 
   config.vm.synced_folder '.', '/home/vagrant', disabled: true
 
@@ -43,6 +43,13 @@ Vagrant.configure("2") do |config|
       chown -R vagrant:vagrant /home/vagrant
       exit 0
     SHELL
+  end
+
+  config.vm.provision "Ansible setup", type: "ansible" do |ansible|
+    ansible.config_file = "../ansible/ansible.cfg"
+    ansible.inventory_path = "../ansible/hosts.yml"
+    ansible.limit = "all"
+    ansible.playbook = "../ansible/playbooks/deploy-booker-from-scratch.yml"
   end
 
 end
