@@ -62,6 +62,9 @@ services:
     depends_on:
       backend:
         condition: service_healthy
+    environment:
+      - BACKEND_HOST=backend1
+      - BACKEND_PORT=8008
     ports:
       - "8002:8005"
     healthcheck:

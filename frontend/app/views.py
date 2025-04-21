@@ -1,4 +1,5 @@
 import json
+import os
 
 import requests
 from django.http import JsonResponse
@@ -9,8 +10,9 @@ from requests.adapters import HTTPAdapter
 # BACKEND_URL = "127.0.0.1"
 # BACKEND_PORT = "8001"
 
-BACKEND_URL = "backend"
-BACKEND_PORT = "8000"
+
+BACKEND_URL = os.environ.get("BACKEND_HOST", "backend")
+BACKEND_PORT = int(os.environ.get("BACKEND_PORT", 8000))
 
 
 @csrf_exempt
