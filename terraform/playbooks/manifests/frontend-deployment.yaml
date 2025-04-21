@@ -1,0 +1,24 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: frontend
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: frontend
+  template:
+    metadata:
+      labels:
+        app: frontend
+    spec:
+      containers:
+      - name: frontend
+        image: ghcr.io/rkrisanoff/devops-spring-2025/frontend:latest               # ← ваш путь к образу
+        ports:
+        - containerPort: 8005
+        env:
+        - name: BACKEND_HOST
+          value: backend.default.svc.cluster.local
+        - name: BACKEND_PORT
+          value: "8080"

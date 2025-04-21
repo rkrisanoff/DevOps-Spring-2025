@@ -1,0 +1,31 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: db-migrator
+spec:
+  template:
+    spec:
+      containers:
+      - name: migrator
+        image: ghcr.io/rkrisanoff/devops-spring-2025/backend:latest
+        env:
+        - name: ALEMBIC_POSTGRES_HOST
+          value: "pgvector.default.svc.cluster.local"
+        - name: ALEMBIC_POSTGRES_PORT
+          value: "5432"
+        - name: ALEMBIC_POSTGRES_DATABASE
+          value: "postgres"
+        - name: ALEMBIC_POSTGRES_USER
+          value: "postgres"
+        - name: ALEMBIC_POSTGRES_PASSWORD
+          value: "postgres"
+        #command: "uv run alembic --config=./etc/alembic.ini upgrade head"
+        command:
+          - uv
+          - run
+          - alembic
+          - --config=./etc/alembic.ini
+          - upgrade
+          - head
+      restartPolicy: Never
+  backoffLimit: 3

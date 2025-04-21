@@ -1,0 +1,135 @@
+- hosts: all
+  become: true
+  vars:
+    user: ubuntu
+    manifests_dir: manifests/
+  collections:
+    - kubernetes.core
+  tasks:
+    - name: install packages
+      apt:
+        name:
+          - docker.io
+          - apt-transport-https
+          - ca-certificates
+          - curl
+          - vim
+          - jq
+          - yq
+        state: present
+        update_cache: yes
+
+    - name: add docker user
+      user:
+        name: "{{ user }}"
+        groups: docker
+        append: yes
+
+    - name: get lastest stable kubectl
+      command: curl -sL https://dl.k8s.io/release/stable.txt
+      register: kubectl_version
+      changed_when: false
+      run_once: true
+
+    - name: download kubectl
+      get_url:
+        url: "https://dl.k8s.io/release/{{ kubectl_version.stdout }}/bin/linux/amd64/kubectl"
+        dest: /usr/local/bin/kubectl
+        mode: '0755'
+      run_once: true
+
+    - name: download minikube .deb
+      get_url:
+        url: https://storage.googleapis.com/minikube/releases/latest/minikube_latest_amd64.deb
+        dest: /tmp/minikube.deb
+        mode: '0644'
+      run_once: true
+
+    - name: install minikube
+      apt:
+        deb: /tmp/minikube.deb
+        state: present
+      run_once: true
+
+    - name: reset ssh session
+      meta: reset_connection
+
+    - name: run minikube
+      become_user: "{{ user }}"
+      environment:
+        HOME: "/home/{{ user }}"
+      shell: |
+        sg docker -c "minikube start \
+        --driver=docker \
+        --memory=4096 \
+        --cpus=2 \
+        # --kubeconfig=/home/{{ user }}/.kube/config \
+        --embed-certs"
+      args:
+        creates: "/home/{{ user }}/.kube"
+    - name: install kubernetes
+      apt:
+        name:
+          - python3-kubernetes
+        state: present
+        update_cache: yes
+    - name: install pyyaml
+      apt:
+        name:
+          - python3-yaml
+        state: present
+
+    - name: install ingress-nginx
+      vars:
+        ansible_shell_executable: /bin/bash
+      shell: |
+        kubectl --kubeconfig /home/{{ user }}/.kube/config   apply -f https://raw.githubusercontent.com/kubernetes/ingress-nginx/main/deploy/static/provider/cloud/deploy.yaml
+    - name: list manifests
+      ansible.builtin.set_fact:
+        k8s_manifests: "{{ lookup('ansible.builtin.fileglob', playbook_dir ~ '/{{ manifests_dir }}/*.yaml', wantlist=True) }}"
+
+    - name: Sync manifest dir
+      ansible.builtin.synchronize:
+        src: "{{ playbook_dir }}/{{ manifests_dir }}"
+        dest: "/home/{{ user }}/manifests"
+        recursive: yes
+      delegate_to: localhost
+      vars:
+        ansible_become: false
+
+    - name: apply manifests
+      kubernetes.core.k8s:
+        kubeconfig: "/home/{{ user }}/.kube/config"
+        state: present
+        src: "/home/{{ user }}/{{ manifests_dir }}/{{ item | basename }}"
+        namespace: default
+      loop: "{{ k8s_manifests }}"
+      loop_control:
+        label: "{{ item | basename }}"
+    - name: Create Prometheus volume
+      community.docker.docker_volume:
+        name: prometheus_data
+    - name: Run Prometheus
+      community.docker.docker_container:
+        name: prometheus
+        image: prom/prometheus:latest
+        ports:
+          - "9090:9090"
+        volumes:
+          prometheus_data:/etc/prometheus/
+        restart_policy: unless-stopped
+    - name: Create Grafana volume
+      community.docker.docker_volume:
+        name: grafana_data
+    - name: Run Grafana
+      community.docker.docker_container:
+        name: grafana
+        image: grafana/grafana:latest
+        ports:
+          - "3000:3000"
+        volumes:
+          - grafana_data:/var/lib/grafana
+        env:
+          GF_SECURITY_ADMIN_USER: admin
+          GF_SECURITY_ADMIN_PASSWORD: admin
+        restart_policy: unless-stopped
