@@ -20,6 +20,7 @@ dependencies = [
     "msgspec==0.19.*",
     "sqlalchemy==2.0.*",
     "uvicorn==0.34.*",
+    "prometheus-client>=0.21.0",
 ]
 
 [dependency-groups]
