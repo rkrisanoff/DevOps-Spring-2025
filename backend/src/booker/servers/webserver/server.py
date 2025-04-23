@@ -5,6 +5,7 @@ import sqlalchemy
 from litestar import Litestar
 from litestar.config.cors import CORSConfig
 from litestar.openapi import OpenAPIConfig
+from litestar.plugins.prometheus import PrometheusConfig, PrometheusController
 
 from booker.api.rest.controllers.books import BooksController
 from booker.api.rest.controllers.version import get_version
@@ -37,12 +38,15 @@ def create_server(config: WebServerConfig) -> Litestar:
         async with async_session_maker() as session:
             yield session
 
+    prometheus_config = PrometheusConfig(group_path=False)
+
     app = Litestar(
-        route_handlers=[get_version, root_router],
+        route_handlers=[get_version, root_router, PrometheusController],
         dependencies={"config": lambda: config, "session": provide_session},
         cors_config=cors_config,
         openapi_config=openapi_config,
         debug=True,
+        middleware=[prometheus_config.middleware],
     )
 
     return app
