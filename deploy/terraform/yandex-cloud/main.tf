@@ -47,6 +47,43 @@ resource "yandex_compute_instance" "book-app-vm" {
 
 }
 
+
+resource "yandex_compute_disk" "monitoring-boot-disk" {
+  name     = "monitoring-drive"
+  type     = "network-ssd"
+  zone     = "ru-central1-a"
+  size     = "10"
+  image_id = "fd85m9q2qspfnsv055rh"
+}
+
+
+resource "yandex_compute_instance" "monitoring-vm" {
+  name                      = "monitoring-vm"
+  allow_stopping_for_update = true
+  platform_id               = "standard-v3"
+  zone                      = "ru-central1-a"
+
+  resources {
+    cores  = 2
+    memory = 2
+  }
+
+  boot_disk {
+    disk_id = yandex_compute_disk.monitoring-boot-disk.id
+  }
+
+  network_interface {
+    subnet_id = yandex_vpc_subnet.subnet.id
+    nat       = true
+  }
+
+  metadata = {
+    # ssh-keys = "ubuntu:${file("~/.ssh/yandex-cloud.pub")}"
+    user-data = "${file("cloud-init.txt")}"
+  }
+
+}
+
 resource "yandex_vpc_network" "network" {
   name = "network"
 }
@@ -56,6 +93,45 @@ resource "yandex_vpc_subnet" "subnet" {
   zone           = "ru-central1-a"
   network_id     = yandex_vpc_network.network.id
   v4_cidr_blocks = ["192.168.10.0/24"]
+}
+
+
+
+resource "null_resource" "setup-monitoring" {
+  connection {
+    type        = "ssh"
+    user        = "ubuntu"
+    private_key = file("~/.ssh/yandex-cloud")
+    host        = yandex_compute_instance.monitoring-vm.network_interface[0].nat_ip_address
+  }
+
+  provisioner "file" {
+    source      = "monitoring_compose.yml"
+    destination = "/home/ubuntu/docker-compose.yml"
+  }
+
+  provisioner "file" {
+    source      = "prometheus.yml"
+    destination = "/home/ubuntu/prometheus.yml"
+  }
+
+
+  provisioner "remote-exec" {
+    inline = ["mkdir /home/ubuntu/grafana_provisioning"]
+  }
+
+  provisioner "file" {
+    source      = "grafana_provisioning_vm/"
+    destination = "/home/ubuntu/grafana_provisioning/"
+  }
+
+  provisioner "remote-exec" {
+    script = "install-docker.sh"
+  }
+
+  provisioner "remote-exec" {
+    inline = ["cd /home/ubuntu | sudo docker compose up -d"]
+  }
 }
 
 
@@ -83,4 +159,12 @@ output "internal_ip_address" {
 
 output "external_ip_address" {
   value = yandex_compute_instance.book-app-vm.network_interface.0.nat_ip_address
+}
+
+output "internal_ip_address_monitoring" {
+  value = yandex_compute_instance.monitoring-vm.network_interface.0.ip_address
+}
+
+output "external_ip_address_monitoring" {
+  value = yandex_compute_instance.monitoring-vm.network_interface.0.nat_ip_address
 }

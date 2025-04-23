@@ -1,0 +1,35 @@
+services:
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: prometheus
+    restart: unless-stopped
+    volumes:
+      - /home/ubuntu/prometheus.yml:/etc/prometheus/prometheus.yml
+      - prometheus_data:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+    ports:
+      - '9090:9090'
+    networks:
+      - monitoring
+
+  grafana:
+    image: grafana/grafana
+    container_name: grafana
+    restart: unless-stopped
+    volumes:
+      - /home/ubuntu/grafana_provisioning/:/home/grafana/grafana_provisioning/
+    ports:
+      - '3000:3000'
+    networks:
+      - monitoring
+    environment:
+      - GF_PATHS_CONFIG=/home/grafana/grafana_provisioning/grafana.ini
+      - GF_PATHS_PROVISIONING=/home/grafana/grafana_provisioning/
+
+networks:
+  monitoring:
+    driver: bridge
+
+volumes:
+  prometheus_data: {}
