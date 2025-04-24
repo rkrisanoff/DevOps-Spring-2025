@@ -4,7 +4,7 @@ kind: Deployment
 metadata:
   name: backend
 spec:
-  replicas: 2
+  replicas: 1
   selector:
     matchLabels:
       app: backend
@@ -17,7 +17,7 @@ spec:
       - name: backend
         image: ghcr.io/rkrisanoff/devops-spring-2025/backend:latest
         ports:
-        - containerPort: 8080
+        - containerPort: 8000
         env:
         - name: PROJECT_POSTGRES_DATABASE
           value: postgres

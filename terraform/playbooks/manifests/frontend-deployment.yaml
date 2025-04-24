@@ -21,4 +21,4 @@ spec:
         - name: BACKEND_HOST
           value: backend.default.svc.cluster.local
         - name: BACKEND_PORT
-          value: "8080"
+          value: "8000"
