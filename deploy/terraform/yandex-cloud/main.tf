@@ -96,6 +96,20 @@ resource "yandex_vpc_subnet" "subnet" {
 }
 
 
+locals {
+  prometheus_custom_config = templatefile(
+    "prometheus.yml",
+    {
+      external_ip_address = yandex_compute_instance.book-app-vm.network_interface.0.nat_ip_address
+    }
+  )
+}
+
+resource "local_file" "copy_file" {
+  content = local.prometheus_custom_config
+  filename = "prometheus_custom.yml"
+}
+
 
 resource "null_resource" "setup-monitoring" {
   connection {
@@ -111,7 +125,7 @@ resource "null_resource" "setup-monitoring" {
   }
 
   provisioner "file" {
-    source      = "prometheus.yml"
+    source      = "prometheus_custom.yml"
     destination = "/home/ubuntu/prometheus.yml"
   }
 

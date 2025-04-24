@@ -1,13 +1,13 @@
 global:
-  scrape_interval:     15s # By default, scrape targets every 15 seconds.
+  scrape_interval: 5s # By default, scrape targets every 15 seconds.
 
 scrape_configs:
   - job_name: 'frontend'
     scrape_interval: 5s
     static_configs:
-      - targets: ['localhost:8002'] # put your web-address here
+      - targets: ['${external_ip_address}:8002'] # put your web-address here
 
   - job_name: 'backend'
     scrape_interval: 5s
     static_configs:
-      - targets: ['localhost:8001'] # put your web-address here
+      - targets: ['${external_ip_address}:8001'] # put your web-address here

@@ -1,0 +1,21 @@
+phantom:
+  address: 89.169.153.156:8002 # [Target's address]:[target's port]
+  uris:
+    - /
+    - /get_books/
+    - /get_book/1/
+    - /get_book/2/
+    - /get_book/3/
+    - /get_book/4/
+    - /get_book/5/
+    - /get_book/6/
+    - /get_book/7/
+    - /get_book/8/
+    - /get_book/9/
+  load_profile:
+    load_type: rps # schedule load by defining requests per second
+    schedule: line(1, 100, 1m) const (100, 3m)
+console:
+  enabled: true # enable console output
+telegraf:
+  enabled: false # let's disable telegraf monitoring for the first time
