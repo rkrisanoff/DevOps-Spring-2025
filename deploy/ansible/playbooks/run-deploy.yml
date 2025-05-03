@@ -1,0 +1,13 @@
+- name: Run All Book App Containers
+  hosts: all
+  become: true
+  gather_facts: true
+
+
+  tasks:
+  - name: run Docker containers
+    community.docker.docker_compose_v2:
+      project_src: "{{lookup('ansible.builtin.env', 'DEST_FOLDER')}}/DevOps-Spring-2025-0.2.4/"
+      files:
+      - compose.yml
+      state: "present"

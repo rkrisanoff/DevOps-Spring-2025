@@ -1,0 +1,32 @@
+---
+- name: deploy Book App using Docker
+  hosts: all
+  become: true
+  gather_facts: true
+
+  pre_tasks:
+  - name: update packages
+    apt:
+      update_cache: true
+      cache_valid_time: 86400
+
+  roles:
+  - geerlingguy.docker
+
+  tasks:
+  - name: Download github release
+    ansible.builtin.get_url:
+      url: "https://github.com/rkrisanoff/DevOps-Spring-2025/archive/refs/tags/v{{lookup('ansible.builtin.env', 'APP_TAG_VERSION')}}.tar.gz"
+      dest: /tmp/archive.tar.gz
+
+  - name: Extract Source code into folder
+    ansible.builtin.unarchive:
+      src: /tmp/archive.tar.gz
+      dest: "{{lookup('ansible.builtin.env', 'DEST_FOLDER')}}"
+      remote_src: true
+
+  - name: deploy via docker-compose
+    community.docker.docker_compose_v2:
+      project_src: "{{lookup('ansible.builtin.env', 'DEST_FOLDER')}}/DevOps-Spring-2025-{{lookup('ansible.builtin.env', 'APP_TAG_VERSION')}}/"
+      files:
+      - compose.yml
