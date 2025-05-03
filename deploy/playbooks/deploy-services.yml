@@ -1,0 +1,49 @@
+- hosts: all
+  become: true
+
+  vars:
+    user: ubuntu
+    manifests_dir: manifests/
+
+  collections:
+    - kubernetes.core
+
+  tasks:
+    - name: install python-kubernetes
+      apt:
+        name:
+          - python3-kubernetes
+        state: present
+        update_cache: yes
+    - name: install python-yaml
+      apt:
+        name:
+          - python3-yaml
+        state: present
+
+    - name: list manifests
+      ansible.builtin.set_fact:
+        k8s_manifests: "{{ lookup('ansible.builtin.fileglob', '{{ playbook_dir }}/../{{ manifests_dir }}/*.yaml', wantlist=True) }}"
+
+    - name: Sync manifest dir
+      ansible.builtin.synchronize:
+        src: "../{{ manifests_dir }}"
+        dest: "/home/{{ user }}/manifests"
+        recursive: yes
+      delegate_to: localhost
+      vars:
+        ansible_become: false
+
+    - name: apply manifests
+      kubernetes.core.k8s:
+        kubeconfig: "/home/{{ user }}/.kube/config"
+        state: present
+        src: "/home/{{ user }}/{{ manifests_dir }}/{{ item | basename }}"
+        namespace: default
+      loop: "{{ k8s_manifests }}"
+      loop_control:
+        label: "{{ item | basename }}"
+
+    - name: debug
+      debug:
+        msg: "All services applied!"

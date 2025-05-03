@@ -1,0 +1,36 @@
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: backend
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: backend
+  template:
+    metadata:
+      labels:
+        app: backend
+    spec:
+      containers:
+      - name: backend
+        image: ghcr.io/rkrisanoff/devops-spring-2025/backend:latest
+        ports:
+        - containerPort: 8000
+        env:
+        - name: PROJECT_POSTGRES_DATABASE
+          value: postgres
+        - name: PROJECT_POSTGRES_USER
+          value: postgres
+        - name: PROJECT_POSTGRES_PASSWORD
+          value: postgres
+        - name: PROJECT_POSTGRES_HOST
+          value: pgvector.default.svc.cluster.local
+        - name: PROJECT_POSTGRES_PORT
+          value: "5432"
+        - name: PROJECT_COMMON_VERSION
+          value: 0.3.0
+        resources:
+          requests:
+            cpu: 300m

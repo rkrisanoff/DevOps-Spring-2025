@@ -1,0 +1,61 @@
+- hosts: all
+  become: true
+
+  vars:
+    user: ubuntu
+
+  collections:
+    - kubernetes.core
+
+  tasks:
+    - name: Check if snapd is installed
+      ansible.builtin.apt:
+        name: snapd
+        state: present
+        update_cache: true
+
+    - name: Install helm classically
+      ansible.builtin.snap:
+        name: helm
+        classic: yes
+        state: present
+
+
+    - name: Add `prometheus-community` Helm Repo
+      ansible.builtin.command: >
+        helm repo add prometheus-community https://prometheus-community.github.io/helm-charts
+      args:
+        creates: "{{ ansible_env.HOME }}/.config/helm/repositories/repositories.yaml"
+
+    - name: Update local helm charts index
+      ansible.builtin.command: helm repo update
+
+
+    - name: Install node-exporter as NodePort
+      kubernetes.core.helm:
+        kubeconfig: "/home/{{ user }}/.kube/config"
+        name: node-exporter
+        chart_ref: prometheus-community/prometheus-node-exporter
+        namespace: monitoring
+        create_namespace: true
+        values:
+          service:
+            type: NodePort
+            nodePort: 31000
+      # helm-chart prometheus-node-exporter по умолчанию поддерживает service.type и service.nodePort :contentReference[oaicite:0]{index=0}
+
+    - name: Install kube-state-metrics as NodePort
+      kubernetes.core.helm:
+        kubeconfig: "/home/{{ user }}/.kube/config"
+        name: kube-state-metrics
+        chart_ref: prometheus-community/kube-state-metrics
+        namespace: monitoring
+        create_namespace: true
+        values:
+          service:
+            type: NodePort
+            nodePort: 31001
+
+    - name: debug
+      debug:
+        msg: "All metrics running!"

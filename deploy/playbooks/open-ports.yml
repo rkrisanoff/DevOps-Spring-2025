@@ -1,0 +1,38 @@
+- hosts: all
+  become: true
+
+  vars:
+    user: ubuntu
+
+  collections:
+    - kubernetes.core
+
+  tasks:
+    - name: Get Node object of current host
+      kubernetes.core.k8s_info:
+        kubeconfig: "/home/{{ user }}/.kube/config"
+        api_version: v1
+        kind: Node
+      register: node_info
+
+    # minikube ip
+    - set_fact:
+        internal_node_ip: >-
+          {{
+            node_info.resources[0].status.addresses
+            | selectattr('type', 'equalto', 'InternalIP')
+            | map(attribute='address')
+            | first
+          }}
+
+    - name: Minicube ip output
+      debug:
+        msg: "{{ internal_node_ip }}"
+
+    - name: Create .sh file to open ports via template
+      ansible.builtin.template:
+       src: ../templates/open_ports.j2
+       dest: /home/ubuntu/open-ports-templated.sh
+
+    - name: Finally open ports
+      ansible.builtin.command: sudo bash /home/ubuntu/open-ports-templated.sh

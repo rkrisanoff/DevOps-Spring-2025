@@ -1,0 +1,14 @@
+[Unit]
+Description=Prometheus Monitoring Server
+After=network.target
+
+[Service]
+User=prometheus
+Group=prometheus
+ExecStart=/usr/local/bin/prometheus-2.55.1.linux-amd64/prometheus \
+    --config.file /etc/prometheus/prometheus.yml \
+    --storage.tsdb.path /var/lib/prometheus/
+
+
+[Install]
+WantedBy=multi-user.target

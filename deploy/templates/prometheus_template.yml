@@ -1,0 +1,23 @@
+global:
+  scrape_interval: 5s
+
+scrape_configs:
+  - job_name: 'kubernetes-system'
+    scrape_interval: 5s
+    static_configs:
+      - targets: ['${external_ip_address}:31000']
+
+  - job_name: 'kube-state-metrics'
+    scrape_interval: 5s
+    static_configs:
+      - targets: ['${external_ip_address}:31001']
+
+  - job_name: 'frontend'
+    scrape_interval: 5s
+    static_configs:
+      - targets: ['${external_ip_address}:30200']
+
+  - job_name: 'backend'
+    scrape_interval: 5s
+    static_configs:
+      - targets: ['${external_ip_address}:31002']

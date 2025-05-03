@@ -1,8 +1,0 @@
-all:
-  hosts:
-    ubuntu_virtual_box:
-      ansible_host: <VM HOST>
-      ansible_user: <USER>
-      ansible_password: <PASSWORD>
-      ansible_port: <SSH PORT DEFAULT 22>
-      ansible_python: /usr/bin/python3
