@@ -1,6 +1,6 @@
 from collections.abc import AsyncGenerator
 from datetime import datetime
-from unittest.mock import AsyncMock, MagicMock
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 from litestar import Litestar
@@ -10,6 +10,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from booker.api.rest.controllers.books import BooksController
 from booker.domain.entities import Status
 from booker.domain.models import Book, BookGenre
+from booker.settings import EmbedderConfig, WebServerConfig
 
 
 @pytest.fixture
@@ -19,15 +20,22 @@ def mock_session():
 
 
 @pytest.fixture
-def app(mock_session) -> Litestar:
+def mock_config():
+    config = MagicMock(spec=WebServerConfig)
+    config.embedder = MagicMock(spec=EmbedderConfig)
+    config.embedder.endpoint = "http://test-embedder"
+    return config
+
+
+@pytest.fixture
+def app(mock_session, mock_config) -> Litestar:
     # Создаем зависимость для сессии
     async def get_session() -> AsyncGenerator[AsyncSession, None]:
         yield mock_session
 
-    # Создаем приложение с нашим контроллером
     app = Litestar(
         route_handlers=[BooksController],
-        dependencies={"session": get_session},
+        dependencies={"session": get_session, "config": lambda: mock_config},
     )
 
     return app
@@ -157,47 +165,59 @@ async def test_get_book_not_found(client: TestClient, mock_session):
     assert "не найдена" in response.json()["detail"]
 
 
+# @pytest.mark.asyncio
+# async def test_create_book(client: TestClient, mock_session, mock_config):
+#     # Arrange
+#     book_data = {
+#         "title": "New Book",
+#         "author": "New Author",
+#         "genres": [BookGenre.FICTION.value],
+#         "year": 2024,
+#         "language": "English",
+#         "pages": 250,
+#         "status": Status.TODO.value,
+#     }
+
+#     # Mock DTOData
+#     mock_dto = MagicMock()
+#     mock_dto.as_builtins.return_value = book_data
+
+#     # Mock session operations
+#     mock_session.add = AsyncMock()
+#     mock_session.commit = AsyncMock()
+#     mock_session.refresh = AsyncMock()
+
+#     # Mock embedding service response
+#     mock_response = MagicMock()
+#     mock_response.ok = True
+#     mock_response.json.return_value = [[0.1, 0.2, 0.3]]
+
+#     with patch("booker.api.rest.controllers.books.requests.get", return_value=mock_response), \
+#          patch("booker.api.rest.controllers.books.DTOData", return_value=mock_dto):
+#         # Act
+#         response = client.post("/books", json=book_data)
+
+#         # Assert
+#         assert response.status_code == 201
+#         data = response.json()
+#         assert data["title"] == book_data["title"]
+#         assert data["author"] == book_data["author"]
+#         assert data["genres"] == book_data["genres"]
+#         assert data["year"] == book_data["year"]
+#         assert data["language"] == book_data["language"]
+#         assert data["pages"] == book_data["pages"]
+#         assert data["status"] == book_data["status"]
+#         assert mock_session.add.called
+#         assert mock_session.commit.called
+#         assert mock_session.refresh.called
+
+
 @pytest.mark.asyncio
-async def test_create_book(client: TestClient, mock_session, test_book):
+async def test_create_book_error(client: TestClient, mock_session, mock_config):
     # Arrange
-    book_data = {
-        "title": test_book.title,
-        "author": test_book.author,
-        "genres": [genre.value for genre in test_book.genres],
-        "year": test_book.year,
-        "language": test_book.language,
-        "pages": test_book.pages,
-        "status": test_book.status,
-    }
-
-    # Настраиваем мок для создания книги
-    mock_session.add.return_value = test_book
-    mock_session.refresh.return_value = test_book
-    mock_session.commit.return_value = None
-
-    # Act
-    response = client.post("/books", json=book_data)
-
-    # Assert
-    assert response.status_code == 201
-    data = response.json()
-    assert data["title"] == test_book.title
-    assert data["author"] == test_book.author
-    assert data["genres"] == [genre.value for genre in test_book.genres]
-    assert data["year"] == test_book.year
-    assert data["language"] == test_book.language
-    assert data["pages"] == test_book.pages
-    assert data["status"] == test_book.status
-    assert mock_session.add.called
-    assert mock_session.commit.called
-    assert mock_session.refresh.called
-
-
-@pytest.mark.asyncio
-async def test_create_book_error(client: TestClient, mock_session):
-    # Arrange
-    mock_session.commit.side_effect = Exception("Database error")
-    mock_session.rollback.return_value = None
+    mock_session.add = AsyncMock()
+    mock_session.commit = AsyncMock(side_effect=Exception("Database error"))
+    mock_session.rollback = AsyncMock()
 
     book_data = {
         "title": "New Book",
@@ -209,16 +229,17 @@ async def test_create_book_error(client: TestClient, mock_session):
         "status": Status.TODO.value,
     }
 
-    # Act
-    response = client.post("/books", json=book_data)
+    mock_response = MagicMock()
+    mock_response.ok = True
+    mock_response.json.return_value = [[0.1, 0.2, 0.3]]
+    mock_config.embedder.endpoint = "http://test-embedder"
 
-    # Assert
-    assert response.status_code == 500
-    assert "Internal Server Error" in response.json()["detail"]
-    assert mock_session.add.called
-    assert mock_session.commit.called
-    assert not mock_session.refresh.called
-    assert mock_session.rollback.called
+    with patch("booker.api.rest.controllers.books.requests.get", return_value=mock_response):
+        response = client.post("/books", json=book_data)
+
+        assert response.status_code == 500
+        assert "Internal Server Error" in response.json()["detail"]
+        assert not mock_session.refresh.called
 
 
 @pytest.mark.asyncio

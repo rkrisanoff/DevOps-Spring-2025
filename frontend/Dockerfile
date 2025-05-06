@@ -12,6 +12,6 @@ WORKDIR /frontend
 
 COPY . .
 RUN uv sync --no-dev
-RUN uv pip install -e .
+RUN uv pip install -e . --no-deps
 
 ENTRYPOINT  [ "uv", "run", "python", "manage.py", "runserver", "0.0.0.0:8005" ]

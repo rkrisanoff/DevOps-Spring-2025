@@ -8,15 +8,33 @@ services:
     depends_on:
       migrator:
         condition: service_completed_successfully
+      embedder:
+        condition: service_healthy
+
     environment:
       - PROJECT_POSTGRES_DATABASE=postgres
       - PROJECT_POSTGRES_USER=postgres
       - PROJECT_POSTGRES_PASSWORD=postgres
       - PROJECT_POSTGRES_HOST=postgres
       - PROJECT_POSTGRES_PORT=5432
-      - PROJECT_COMMON_VERSION=0.1.0
+      - PROJECT_COMMON_VERSION=0.4.0
+      - PROJECT_EMBEDDER_HOST=embedder
+      - PROJECT_EMBEDDER_PORT=9999
     healthcheck:
       test: ["CMD", "curl", "-f", "http://backend:8000/version"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+
+  embedder:
+    build:
+      context: embedder/
+      dockerfile: ./Dockerfile
+    ports:
+      - "9999:9999"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://embedder:9999/version"]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -40,7 +58,7 @@ services:
     restart: "no"
 
   postgres:
-    image: postgres:16
+    image: pgvector/pgvector:pg17
     environment:
       - POSTGRES_USER=postgres
       - POSTGRES_PASSWORD=postgres
@@ -49,6 +67,7 @@ services:
       - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
+      - ./init-vector.sql:/docker-entrypoint-initdb.d/01-init-vector.sql:ro
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres"]
       interval: 10s
@@ -63,8 +82,8 @@ services:
       backend:
         condition: service_healthy
     environment:
-      - BACKEND_HOST=backend1
-      - BACKEND_PORT=8008
+      - BACKEND_HOST=backend
+      - BACKEND_PORT=8000
     ports:
       - "8002:8005"
     healthcheck:

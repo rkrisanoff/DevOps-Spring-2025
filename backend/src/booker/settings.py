@@ -17,6 +17,16 @@ class PostgresConfig:
 
 
 @environ.config(frozen=True)
+class EmbedderConfig:
+    host: str = environ.var()
+    port: int = environ.var()
+
+    @property
+    def endpoint(self) -> str:
+        return f"http://{self.host}:{self.port}"
+
+
+@environ.config(frozen=True)
 class CommonConfig:
     version: str = environ.var(default="0.1.0")
 
@@ -29,3 +39,4 @@ class WebServerConfig:
     common: CommonConfig = environ.group(
         CommonConfig,
     )
+    embedder: EmbedderConfig = environ.group(EmbedderConfig)

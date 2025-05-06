@@ -58,7 +58,7 @@ if [[ $STEP =~ ^(ansible|all)$ ]]; then
   echo 'external ip: ' $EXTERNAL_IP
 
   export ANSIBLE_HOST_KEY_CHECKING=False
-  export ANSIBLE_SSH_PRIVATE_KEY="/home/anastasia/.ssh/yandex-cloud"
+  export ANSIBLE_SSH_PRIVATE_KEY="/home/trisolaris/.ssh/id_rsa"
   export ANSIBLE_USER="ubuntu"
 
   run ansible-playbook --inventory "${EXTERNAL_IP}," \

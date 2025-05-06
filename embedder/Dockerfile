@@ -14,7 +14,18 @@ COPY . .
 RUN uv sync --no-dev
 RUN uv pip install --editable . --no-deps
 
-EXPOSE 8000
+
+ENV HF_HOME=/models
+
+RUN mkdir -p /models
+
+RUN uv run python - <<'EOF'
+from sentence_transformers import SentenceTransformer
+SentenceTransformer("all-MiniLM-L6-v2")
+print("Модель all-MiniLM-L6-v2 загружена в кэш.")
+EOF
+
+EXPOSE 9999
 
 
-ENTRYPOINT ["uv", "run", "run_webserver"]
+ENTRYPOINT ["uv", "run", "run_server"]

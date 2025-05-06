@@ -1,0 +1,20 @@
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: embedder
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: embedder
+  template:
+    metadata:
+      labels:
+        app: embedder
+    spec:
+      containers:
+      - name: embedder
+        image: ghcr.io/rkrisanoff/devops-spring-2025/embedder:latest
+        ports:
+        - containerPort: 9999

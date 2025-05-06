@@ -1,6 +1,7 @@
 import datetime
 
 import sqlalchemy as sa
+from pgvector.sqlalchemy import Vector
 from sqlalchemy import BigInteger, Column
 from sqlalchemy.ext.declarative import declarative_base
 
@@ -29,6 +30,7 @@ class Book(Base):
     pages: int = Column(
         sa.Integer,
     )
+    embedding = Column(Vector(384), nullable=False)
     status: str = Column(sa.String, nullable=True)
     created_at = Column(sa.DateTime(timezone=True), default=datetime.datetime.now(datetime.UTC))
     updated_at = Column(

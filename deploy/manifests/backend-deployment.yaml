@@ -30,7 +30,12 @@ spec:
         - name: PROJECT_POSTGRES_PORT
           value: "5432"
         - name: PROJECT_COMMON_VERSION
-          value: 0.3.0
+          value: 0.4.0
+        - name: PROJECT_EMBEDDER_HOST
+          value: embedder.default.svc.cluster.local
+        - name: PROJECT_EMBEDDER_PORT
+          value: "9999"
+
         resources:
           requests:
             cpu: 300m

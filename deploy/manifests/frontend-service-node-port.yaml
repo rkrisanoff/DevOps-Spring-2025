@@ -1,10 +1,10 @@
 apiVersion: v1
 kind: Service
 metadata:
-  name: frontend-nodeport-svc        # поменяйте при необходимости
+  name: frontend-nodeport-svc
 spec:
   type: NodePort
-  selector:                    # ← вставьте свои метки
+  selector:
     app: frontend
   ports:
     - port: 8005              # порт сервиса внутри кластера
