@@ -1,5 +1,5 @@
 phantom:
-  address: 158.160.109.229:30200 # [Target's address]:[target's port]
+  address: 51.250.95.73:30200 # [Target's address]:[target's port]
   uris:
     - /
     - /get_books/

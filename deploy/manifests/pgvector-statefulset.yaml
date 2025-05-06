@@ -39,6 +39,7 @@ spec:
         volumeMounts:
         - name: data
           mountPath: /var/lib/postgresql/data
+          subPath: data
         - name: initdb
           mountPath: /docker-entrypoint-initdb.d/01-create-extension.sql
           subPath: 01-create-extension.sql
@@ -48,11 +49,6 @@ spec:
         configMap:
           name: pgvector-initdb
           defaultMode: 0755
-  volumeClaimTemplates:
-  - metadata:
-      name: data
-    spec:
-      accessModes: ["ReadWriteOnce"]
-      resources:
-        requests:
-          storage: 10Gi
+      - name: data
+        persistentVolumeClaim:
+            claimName: pg-data-pvc

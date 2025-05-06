@@ -43,9 +43,10 @@ ansible-playbook --inventory "${EXTERNAL_IP}," \
                  --user "${ANSIBLE_USER}" \
                  --extra-vars "ansible_ssh_private_key_file=${ANSIBLE_SSH_PRIVATE_KEY}" \
                  playbooks/deploy-metrics.yml -v
+```
 
-ansible-playbook --inventory "${EXTERNAL_IP}," \
-                 --user "${ANSIBLE_USER}" \
-                 --extra-vars "ansible_ssh_private_key_file=${ANSIBLE_SSH_PRIVATE_KEY}" \
-                 playbooks/open-ports.yml -v
+
+## Патчи для HPA
+```bash
+kubectl patch hpa backend-hpa --type=json -p='[{"op":"replace", "path": "/spec/metrics/0/resource/target/averageUtilization", "value":30}]'
 ```

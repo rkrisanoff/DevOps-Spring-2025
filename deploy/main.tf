@@ -106,10 +106,7 @@ resource "null_resource" "prepare_vm" {
       host        = yandex_compute_instance.book-app-vm.network_interface[0].nat_ip_address
     }
 
-    scripts = [
-      "scripts/install-docker.sh",
-      "scripts/install-kubernetes.sh"
-    ]
+    script = "scripts/install-kubernetes.sh"
   }
 }
 
