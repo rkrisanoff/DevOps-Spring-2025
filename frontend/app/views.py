@@ -120,3 +120,22 @@ def backend_health_check(request):
 @csrf_exempt
 def frontend_health_check(request):
     return JsonResponse({"version": "0.1.0"}, status=200)
+
+
+@csrf_exempt
+def get_recommendations(request, book_id):
+    if request.method == "GET":
+        try:
+            response = requests.get(
+                f"http://{BACKEND_URL}:{BACKEND_PORT}/api/books/{book_id}/similar"
+            )
+            if response.status_code == 200:
+                data = response.json()
+                return JsonResponse(data)
+
+            else:
+                return JsonResponse({}, status=response.status_code)
+        except Exception as e:
+            return JsonResponse({"error": str(e)}, status=500)
+    else:
+        return JsonResponse({}, status=405)

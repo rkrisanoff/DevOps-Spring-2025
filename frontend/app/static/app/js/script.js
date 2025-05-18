@@ -1,6 +1,8 @@
 function drawTable() {
     const tableBody = document.querySelector('.client-table tbody');
+    const recommendationsTable = document.querySelector('.recommendations-table');
     tableBody.innerHTML = '';
+    recommendationsTable.style.display = 'none';
 
     fetch(`/get_books/`)
         .then(response => {
@@ -10,7 +12,7 @@ function drawTable() {
             return response.json();
         })
         .then(data => {
-            const items = data.items
+            const items = data.items;
             items.forEach(book => {
                 const row = document.createElement('tr');
                 row.innerHTML = `
@@ -37,28 +39,93 @@ function drawTable() {
         });
 }
 
-function initializeTableToggle(table, searchContainer, updateTableBtn, toggleTableBtn, mockDrawTable = drawTable) {
-    toggleTableBtn.addEventListener('click', function() {
-        if (table.style.display === 'table') {
-            table.style.display = 'none'; // Hide the table
-            searchContainer.style.display = 'none';
-            updateTableBtn.style.display = 'none'; // Hide the update button
-            toggleTableBtn.textContent = 'Show Table'; // Update button text
-        } else {
-            table.style.display = 'table'; // Show the table
-            searchContainer.style.display = "block";
-            updateTableBtn.style.display = 'inline-block'; // Show the update button
-            toggleTableBtn.textContent = 'Hide Table'; // Update button text
-            mockDrawTable();
+function drawRecommendations(bookId) {
+    const clientTable = document.querySelector('.client-table');
+    const recommendationsTable = document.querySelector('.recommendations-table');
+    const recommendationsBody = recommendationsTable.querySelector('tbody');
+    recommendationsBody.innerHTML = '';
+
+    // Hide the regular table and show recommendations table
+    clientTable.style.display = 'none';
+    recommendationsTable.style.display = 'table';
+
+    fetch(`/get_recommendations/${bookId}/`)
+        .then(response => {
+            if (!response.ok) {
+                throw new Error(`Status: ${response.status}`);
+            }
+            return response.json();
+        })
+        .then(data => {
+            const items = data.similar_books;
+            items.forEach(book => {
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td>${book.id}</td>
+                    <td class="book-title">${book.title}</td>
+                    <td>${book.author}</td>
+                    <td>${book.genres.join(', ')}</td>
+                    <td>${book.publication_year}</td>
+                    <td>${book.pages}</td>
+                    <td>${(book.similarity * 100).toFixed(2)}%</td>
+                `;
+                recommendationsBody.appendChild(row);
+            });
+
+            const searchContainer = document.querySelector('.search-container');
+            searchContainer.style.display = 'block';
+        })
+        .catch(error => {
+            console.error('Error fetching recommendations:', error);
+            alert(error);
+        });
+}
+
+function initializeTableControls(table, searchContainer, closeTableBtn, showRecommendationsBtn, showTableBtn) {
+    // Show table button
+    showTableBtn.addEventListener('click', function() {
+        const recommendationsTable = document.querySelector('.recommendations-table');
+        recommendationsTable.style.display = 'none';
+        table.style.display = 'table';
+        searchContainer.style.display = 'block';
+        drawTable();
+    });
+
+    // Close table button
+    closeTableBtn.addEventListener('click', function() {
+        const recommendationsTable = document.querySelector('.recommendations-table');
+        table.style.display = 'none';
+        recommendationsTable.style.display = 'none';
+        searchContainer.style.display = 'none';
+    });
+
+    // Show recommendations button
+    showRecommendationsBtn.addEventListener('click', function() {
+        const bookId = document.getElementById('recommendationBookId').value;
+        if (!bookId) {
+            alert('Please enter a book ID first');
+            return;
         }
+
+        searchContainer.style.display = 'block';
+        drawRecommendations(bookId);
     });
 }
 
 function initializeSearchFunctionality(searchInput) {
     searchInput.addEventListener('input', function() {
         const searchText = this.value.toLowerCase();
-        const tableRows = document.querySelectorAll('.client-table tbody tr');
-        tableRows.forEach(row => {
+        const clientTableRows = document.querySelectorAll('.client-table tbody tr');
+        const recommendationsTableRows = document.querySelectorAll('.recommendations-table tbody tr');
+
+        // Search in regular table
+        clientTableRows.forEach(row => {
+            const title = row.querySelector('.book-title').textContent.toLowerCase();
+            row.style.display = title.includes(searchText) ? '' : 'none';
+        });
+
+        // Search in recommendations table
+        recommendationsTableRows.forEach(row => {
             const title = row.querySelector('.book-title').textContent.toLowerCase();
             row.style.display = title.includes(searchText) ? '' : 'none';
         });
@@ -277,7 +344,7 @@ function initializeCleanButton(cleanButton) {
 // Export for testing
 if (typeof module !== 'undefined' && module.exports) {
     module.exports = {
-        initializeTableToggle,
+        initializeTableControls,
         drawTable,
         initializeSearchFunctionality,
         initializeBackendCheck,
@@ -294,9 +361,11 @@ if (typeof module !== 'undefined' && module.exports) {
 document.addEventListener('DOMContentLoaded', function() {
     const table = document.querySelector('.client-table');
     const searchContainer = document.querySelector('.search-container');
-    const toggleTableBtn = document.querySelector('.toggle-table-btn');
-    const updateTableBtn = document.querySelector('.update-table-btn');
-    initializeTableToggle(table, searchContainer, updateTableBtn, toggleTableBtn);
+    const closeTableBtn = document.querySelector('.close-table-btn');
+    const showRecommendationsBtn = document.querySelector('.show-recommendations-btn');
+    const showTableBtn = document.querySelector('.show-table-btn');
+
+    initializeTableControls(table, searchContainer, closeTableBtn, showRecommendationsBtn, showTableBtn);
 
     const searchInput = document.getElementById('clientSearch');
     initializeSearchFunctionality(searchInput);
@@ -327,8 +396,4 @@ document.addEventListener('DOMContentLoaded', function() {
     // Handle Delete Form
     const deleteForm = document.getElementById('deleteForm');
     initializeDeleteForm(deleteForm);
-
-    updateTableBtn.addEventListener('click', function() {
-        drawTable();
-    });
 });
