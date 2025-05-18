@@ -186,3 +186,5 @@ deploy/yandex-tank/logs
 frontend/node_modules
 coverage/
 package-lock.json
+
+.scannerwork/
