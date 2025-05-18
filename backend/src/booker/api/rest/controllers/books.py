@@ -173,6 +173,10 @@ OFFSET :offset
                 "offset": offset,
             },
         )
+
+        count_result = await session.execute(select(Book))
+        total_similar = len(count_result.scalars().all()) - 1
+
         return {
             "target_book": {
                 "id": book.id,
@@ -184,6 +188,9 @@ OFFSET :offset
                 "pages": book.pages,
             },
             "similar_books": [row._asdict() for row in result],
+            "limit": limit,
+            "offset": offset,
+            "total": total_similar,
         }
 
     @post(dto=BookWriteDTO)

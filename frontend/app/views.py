@@ -56,8 +56,12 @@ def update_book(request):
 
 def get_books(request):
     if request.method == "GET":
+        offset = request.GET.get("offset", 0)
+        limit = request.GET.get("limit", 10)
         try:
-            response = requests.get(f"http://{BACKEND_URL}:{BACKEND_PORT}/api/books/")
+            response = requests.get(
+                f"http://{BACKEND_URL}:{BACKEND_PORT}/api/books/?offset={offset}&limit={limit}"
+            )
             if response.status_code == 200:
                 data = response.json()
                 return JsonResponse(data)
@@ -125,9 +129,11 @@ def frontend_health_check(request):
 @csrf_exempt
 def get_recommendations(request, book_id):
     if request.method == "GET":
+        offset = request.GET.get("offset", 0)
+        limit = request.GET.get("limit", 10)
         try:
             response = requests.get(
-                f"http://{BACKEND_URL}:{BACKEND_PORT}/api/books/{book_id}/similar"
+                f"http://{BACKEND_URL}:{BACKEND_PORT}/api/books/{book_id}/similar/?offset={offset}&limit={limit}"
             )
             if response.status_code == 200:
                 data = response.json()

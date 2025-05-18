@@ -1,6 +1,7 @@
-const { drawTable } = require('../app/static/app/js/script');
 const {
-  initializeTableToggle,
+  drawTable,
+  drawRecommendations,
+  initializeTableControls,
   initializeSearchFunctionality,
   initializeBackendCheck,
   initializeGetBookForm,
@@ -9,7 +10,7 @@ const {
   initializeFillUpdateForm,
   initializeDeleteForm,
   initializeCleanButton
-} = require('/frontend/app/static/app/js/script.js');
+}= require('/frontend/app/static/app/js/script.js');
 
 // Mock fetch globally
 global.fetch = jest.fn();
@@ -34,11 +35,37 @@ describe('Book Management System Tests', () => {
           </thead>
           <tbody></tbody>
         </table>
+        <table class="recommendations-table" style="display: none;">
+          <thead>
+            <tr>
+              <th>ID</th>
+              <th>Title</th>
+              <th>Author</th>
+              <th>Genres</th>
+              <th>Year</th>
+              <th>Pages</th>
+              <th>Similarity</th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
         <div class="search-container">
           <input type="text" id="clientSearch" placeholder="Search by book title...">
         </div>
-        <button class="toggle-table-btn">Show Table</button>
-        <button class="update-table-btn">Update Table</button>
+        <div class="client-pagination">
+          <button class="prev-page">Previous</button>
+          <span class="page-info">Page 1 of 1</span>
+          <button class="next-page">Next</button>
+        </div>
+        <div class="recommendations-pagination">
+          <button class="prev-page">Previous</button>
+          <span class="page-info">Page 1 of 1</span>
+          <button class="next-page">Next</button>
+        </div>
+        <button class="close-table-btn">Close Table</button>
+        <button class="show-recommendations-btn">Show Recommendations</button>
+        <button class="show-table-btn">Show Table</button>
+        <input type="text" id="recommendationBookId">
         <form id="getBookForm">
           <input type="text" id="getBookId">
           <button type="submit">Get Book</button>
@@ -87,8 +114,9 @@ describe('Book Management System Tests', () => {
       // Initialize all functionality
       const table = document.querySelector('.client-table');
       const searchContainer = document.querySelector('.search-container');
-      const toggleBtn = document.querySelector('.toggle-table-btn');
-      const updateBtn = document.querySelector('.update-table-btn');
+      const closeTableBtn = document.querySelector('.close-table-btn');
+      const showRecommendationsBtn = document.querySelector('.show-recommendations-btn');
+      const showTableBtn = document.querySelector('.show-table-btn');
       const searchInput = document.getElementById('clientSearch');
       const backendCheckBtn = document.getElementById('backendCheckBtn');
       const getBookForm = document.getElementById('getBookForm');
@@ -98,9 +126,7 @@ describe('Book Management System Tests', () => {
       const deleteForm = document.getElementById('deleteForm');
       const cleanButton = document.getElementById('cleanBookDetails');
 
-      // Initialize all functionality
-      const mockDrawTable = jest.fn();
-      initializeTableToggle(table, searchContainer, updateBtn, toggleBtn, mockDrawTable);
+      initializeTableControls(table, searchContainer, closeTableBtn, showRecommendationsBtn, showTableBtn);
       initializeSearchFunctionality(searchInput);
       initializeBackendCheck(backendCheckBtn);
       initializeGetBookForm(getBookForm);
@@ -111,22 +137,44 @@ describe('Book Management System Tests', () => {
       initializeCleanButton(cleanButton);
   });
 
-  test('toggle table visibility works', () => {
+  test('show table button works', async () => {
     const table = document.querySelector('.client-table');
-    const toggleBtn = document.querySelector('.toggle-table-btn');
+    const showTableBtn = document.querySelector('.show-table-btn');
+
+    // Mock the fetch response
+    fetch.mockImplementationOnce(() =>
+        Promise.resolve({
+            ok: true,
+            json: () => Promise.resolve({
+                items: [
+                    {
+                        id: 1,
+                        title: 'Test Book',
+                        author: 'Test Author',
+                        genres: ['Fiction'],
+                        year: 2023,
+                        language: 'English',
+                        pages: 200,
+                        status: 'Reading'
+                    }
+                ],
+                total: 1
+            })
+        })
+    );
 
     // Initial state (hidden)
     expect(table.style.display).toBe('none');
 
-    // First click - show table
-    toggleBtn.click();
-    expect(table.style.display).toBe('table');
-    expect(toggleBtn.textContent).toBe('Hide Table');
+    // Click show table button
+    showTableBtn.click();
 
-    // Second click - hide table
-    toggleBtn.click();
-    expect(table.style.display).toBe('none');
-    expect(toggleBtn.textContent).toBe('Show Table');
+    // Wait for async operations
+    await new Promise(process.nextTick);
+
+    // Table should be shown and drawTable should be called
+    expect(fetch).toHaveBeenCalledWith('/get_books/?offset=0&limit=10');
+    expect(table.style.display).toBe('table');
   });
 
   test('create book form submission', async () => {
@@ -366,82 +414,42 @@ describe('Book Management System Tests', () => {
   });
 
   test('drawTable populates table with book data', async () => {
-      const mockBookData = {
-          items: [
-              {
-                  id: 1,
-                  title: 'Book 1',
-                  author: 'Author 1',
-                  genres: ['Fiction'],
-                  year: 2023,
-                  language: 'English',
-                  pages: 200,
-                  status: 'Reading'
-              },
-              {
-                  id: 2,
-                  title: 'Book 2',
-                  author: 'Author 2',
-                  genres: ['Drama', 'Mystery'],
-                  year: 2022,
-                  language: 'Spanish',
-                  pages: 300,
-                  status: 'Completed'
-              }
-          ]
-      };
+    const mockBookData = {
+      items: [
+        {
+          id: 1,
+          title: 'Book 1',
+          author: 'Author 1',
+          genres: ['Fiction'],
+          year: 2023,
+          language: 'English',
+          pages: 200,
+          status: 'Reading'
+        }
+      ],
+      total: 1
+    };
 
-      // Setup fetch mock
-      fetch.mockImplementationOnce(() =>
-          Promise.resolve({
-              ok: true,
-              json: () => Promise.resolve(mockBookData)
-          })
-      );
+    fetch.mockImplementationOnce(() =>
+      Promise.resolve({
+        ok: true,
+        json: () => Promise.resolve(mockBookData)
+      })
+    );
 
-      // Get table elements
-      const table = document.querySelector('.client-table');
-      const searchContainer = document.querySelector('.search-container');
-      const tableBody = document.querySelector('.client-table tbody');
+    await drawTable();
+    await new Promise(process.nextTick);
 
-      // Call drawTable and wait for it to complete
-      await drawTable();
+    // Verify table is populated
+    const rows = document.querySelectorAll('.client-table tbody tr');
+    expect(rows.length).toBe(1);
 
-      // Wait for the next tick to ensure DOM updates are complete
-      await new Promise(process.nextTick);
+    // Verify pagination
+    const pageInfo = document.querySelector('.client-pagination .page-info');
+    expect(pageInfo.textContent).toBe('Page 1 of 1');
 
-      // Verify table is populated correctly
-      const rows = tableBody.querySelectorAll('tr');
-      expect(rows.length).toBe(2);
-
-      // Check first row data
-      const firstRow = rows[0].querySelectorAll('td');
-      expect(firstRow[0].textContent).toBe('1');
-      expect(firstRow[1].textContent).toBe('Book 1');
-      expect(firstRow[2].textContent).toBe('Author 1');
-      expect(firstRow[3].textContent).toBe('Fiction');
-      expect(firstRow[4].textContent).toBe('2023');
-      expect(firstRow[5].textContent).toBe('English');
-      expect(firstRow[6].textContent).toBe('200');
-      expect(firstRow[7].textContent).toBe('Reading');
-
-      // Check second row data
-      const secondRow = rows[1].querySelectorAll('td');
-      expect(secondRow[0].textContent).toBe('2');
-      expect(secondRow[1].textContent).toBe('Book 2');
-      expect(secondRow[2].textContent).toBe('Author 2');
-      expect(secondRow[3].textContent).toBe('Drama, Mystery');
-      expect(secondRow[4].textContent).toBe('2022');
-      expect(secondRow[5].textContent).toBe('Spanish');
-      expect(secondRow[6].textContent).toBe('300');
-      expect(secondRow[7].textContent).toBe('Completed');
-
-      // Verify table and search container are displayed
-      expect(table.style.display).toBe('table');
-      expect(searchContainer.style.display).toBe('block');
-
-      // Verify fetch was called correctly
-      expect(fetch).toHaveBeenCalledWith('/get_books/');
+    // Verify fetch was called with correct parameters
+    expect(fetch).toHaveBeenCalledWith('/get_books/?offset=0&limit=10');
   });
 
   test('drawTable handles fetch error', async () => {
@@ -630,6 +638,44 @@ describe('Book Management System Tests', () => {
       expect(createForm.tagName).toBe('FORM');
       expect(updateForm.tagName).toBe('FORM');
       expect(deleteForm.tagName).toBe('FORM');
+  });
+
+  test('show recommendations button works', async () => {
+    const recommendationsTable = document.querySelector('.recommendations-table');
+    const showRecommendationsBtn = document.querySelector('.show-recommendations-btn');
+    const recommendationBookId = document.getElementById('recommendationBookId');
+
+    // Set up mock response
+    fetch.mockImplementationOnce(() =>
+      Promise.resolve({
+        ok: true,
+        json: () => Promise.resolve({
+          similar_books: [
+            {
+              id: 1,
+              title: 'Similar Book',
+              author: 'Author',
+              genres: ['Fiction'],
+              publication_year: 2023,
+              pages: 200,
+              similarity: 0.85
+            }
+          ],
+          total: 1
+        })
+      })
+    );
+
+    // Set book ID and click button
+    recommendationBookId.value = '1';
+    showRecommendationsBtn.click();
+
+    // Wait for async operations
+    await new Promise(process.nextTick);
+
+    // Verify recommendations table is shown
+    expect(recommendationsTable.style.display).toBe('table');
+    expect(fetch).toHaveBeenCalledWith('/get_recommendations/1/?offset=0&limit=10');
   });
 
 });

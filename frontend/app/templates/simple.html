@@ -129,12 +129,16 @@
         </div>
     </div>
 
-    <!-- Replace the old buttons with new ones -->
     <div class="table-controls">
-        <button class="show-table-btn">Show Table</button>
-        <button class="show-recommendations-btn">Show Recommendations</button>
-        <input type="number" id="recommendationBookId" class="recommendation-input" placeholder="Enter book ID">
-        <button class="close-table-btn">Close Table</button>
+        <div class="table-controls-left">
+            <button class="show-table-btn">Show Table</button>
+            <button class="show-recommendations-btn">Show Recommendations</button>
+            <input type="text" id="recommendationBookId" class="recommendation-input" placeholder="Book ID">
+
+        </div>
+        <div class="table-controls-right">
+            <button class="close-table-btn">Close Table</button>
+        </div>
     </div>
 
     <!-- Add search input -->
@@ -159,6 +163,11 @@
         <tbody>
         </tbody>
     </table>
+    <div class="pagination client-pagination" style="display: none;">
+        <button class="prev-page">Previous</button>
+        <span class="page-info">Page 1 of 1</span>
+        <button class="next-page">Next</button>
+    </div>
 
     <!-- Recommendations table -->
     <table class="recommendations-table" style="display: none;">
@@ -176,6 +185,11 @@
         <tbody>
         </tbody>
     </table>
+    <div class="pagination recommendations-pagination" style="display: none;">
+        <button class="prev-page">Previous</button>
+        <span class="page-info">Page 1 of 1</span>
+        <button class="next-page">Next</button>
+    </div>
 
     <!-- Add JavaScript -->
     <script src="{% static 'app/js/script.js' %}"></script>

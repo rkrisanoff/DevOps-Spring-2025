@@ -1,10 +1,24 @@
+let currentPage = 1;
+const itemsPerPage = 10;
+let totalPages = 1;
+let currentTableType = 'client'; // or 'recommendations'
+let totalItems = 0; // Add this to track total number of items
+
 function drawTable() {
     const tableBody = document.querySelector('.client-table tbody');
     const recommendationsTable = document.querySelector('.recommendations-table');
+    const clientPagination = document.querySelector('.client-pagination');
+    const recommendationsPagination = document.querySelector('.recommendations-pagination');
+
     tableBody.innerHTML = '';
     recommendationsTable.style.display = 'none';
+    recommendationsPagination.style.display = 'none';
+    currentTableType = 'client';
 
-    fetch(`/get_books/`)
+    const offset = (currentPage - 1) * itemsPerPage;
+    const limit = itemsPerPage;
+
+    fetch(`/get_books/?offset=${offset}&limit=${limit}`)
         .then(response => {
             if (!response.ok) {
                 throw new Error(`Status: ${response.status}`);
@@ -13,25 +27,17 @@ function drawTable() {
         })
         .then(data => {
             const items = data.items;
-            items.forEach(book => {
-                const row = document.createElement('tr');
-                row.innerHTML = `
-                    <td>${book.id}</td>
-                    <td class="book-title">${book.title}</td>
-                    <td>${book.author}</td>
-                    <td>${book.genres.join(', ')}</td>
-                    <td>${book.year}</td>
-                    <td>${book.language}</td>
-                    <td>${book.pages}</td>
-                    <td>${book.status}</td>
-                `;
-                tableBody.appendChild(row);
-            });
+            totalItems = data.total || items.length; // Get total from API or fallback to items length
+            totalPages = Math.ceil(totalItems / itemsPerPage);
+
+            displayPage(items, tableBody);
+            updatePagination('client');
 
             const table = document.querySelector('.client-table');
             const searchContainer = document.querySelector('.search-container');
             table.style.display = 'table';
             searchContainer.style.display = 'block';
+            clientPagination.style.display = 'flex';
         })
         .catch(error => {
             console.error('Error fetching book data:', error);
@@ -43,13 +49,18 @@ function drawRecommendations(bookId) {
     const clientTable = document.querySelector('.client-table');
     const recommendationsTable = document.querySelector('.recommendations-table');
     const recommendationsBody = recommendationsTable.querySelector('tbody');
+    const clientPagination = document.querySelector('.client-pagination');
+    const recommendationsPagination = document.querySelector('.recommendations-pagination');
+
     recommendationsBody.innerHTML = '';
-
-    // Hide the regular table and show recommendations table
     clientTable.style.display = 'none';
-    recommendationsTable.style.display = 'table';
+    clientPagination.style.display = 'none';
+    currentTableType = 'recommendations';
 
-    fetch(`/get_recommendations/${bookId}/`)
+    const offset = (currentPage - 1) * itemsPerPage;
+    const limit = itemsPerPage;
+
+    fetch(`/get_recommendations/${bookId}/?offset=${offset}&limit=${limit}`)
         .then(response => {
             if (!response.ok) {
                 throw new Error(`Status: ${response.status}`);
@@ -58,22 +69,16 @@ function drawRecommendations(bookId) {
         })
         .then(data => {
             const items = data.similar_books;
-            items.forEach(book => {
-                const row = document.createElement('tr');
-                row.innerHTML = `
-                    <td>${book.id}</td>
-                    <td class="book-title">${book.title}</td>
-                    <td>${book.author}</td>
-                    <td>${book.genres.join(', ')}</td>
-                    <td>${book.publication_year}</td>
-                    <td>${book.pages}</td>
-                    <td>${(book.similarity * 100).toFixed(2)}%</td>
-                `;
-                recommendationsBody.appendChild(row);
-            });
+            totalItems = data.total || items.length; // Get total from API or fallback to items length
+            totalPages = Math.ceil(totalItems / itemsPerPage);
 
+            displayPage(items, recommendationsBody);
+            updatePagination('recommendations');
+
+            recommendationsTable.style.display = 'table';
             const searchContainer = document.querySelector('.search-container');
             searchContainer.style.display = 'block';
+            recommendationsPagination.style.display = 'flex';
         })
         .catch(error => {
             console.error('Error fetching recommendations:', error);
@@ -81,9 +86,52 @@ function drawRecommendations(bookId) {
         });
 }
 
+function displayPage(items, tableBody) {
+    tableBody.innerHTML = ''; // Clear the table body
+
+    items.forEach(book => {
+        const row = document.createElement('tr');
+        if (currentTableType === 'client') {
+            row.innerHTML = `
+                <td>${book.id}</td>
+                <td class="book-title">${book.title}</td>
+                <td>${book.author}</td>
+                <td>${book.genres.join(', ')}</td>
+                <td>${book.year}</td>
+                <td>${book.language}</td>
+                <td>${book.pages}</td>
+                <td>${book.status}</td>
+            `;
+        } else {
+            row.innerHTML = `
+                <td>${book.id}</td>
+                <td class="book-title">${book.title}</td>
+                <td>${book.author}</td>
+                <td>${book.genres.join(', ')}</td>
+                <td>${book.publication_year}</td>
+                <td>${book.pages}</td>
+                <td>${(book.similarity * 100).toFixed(2)}%</td>
+            `;
+        }
+        tableBody.appendChild(row);
+    });
+}
+
+function updatePagination(tableType) {
+    const pagination = document.querySelector(`.${tableType}-pagination`);
+    const pageInfo = pagination.querySelector('.page-info');
+    const prevButton = pagination.querySelector('.prev-page');
+    const nextButton = pagination.querySelector('.next-page');
+
+    pageInfo.textContent = `Page ${currentPage} of ${totalPages}`;
+    prevButton.disabled = currentPage === 1;
+    nextButton.disabled = currentPage === totalPages;
+}
+
 function initializeTableControls(table, searchContainer, closeTableBtn, showRecommendationsBtn, showTableBtn) {
     // Show table button
     showTableBtn.addEventListener('click', function() {
+        currentPage = 1; // Reset to first page
         const recommendationsTable = document.querySelector('.recommendations-table');
         recommendationsTable.style.display = 'none';
         table.style.display = 'table';
@@ -101,6 +149,7 @@ function initializeTableControls(table, searchContainer, closeTableBtn, showReco
 
     // Show recommendations button
     showRecommendationsBtn.addEventListener('click', function() {
+        currentPage = 1; // Reset to first page
         const bookId = document.getElementById('recommendationBookId').value;
         if (!bookId) {
             alert('Please enter a book ID first');
@@ -109,6 +158,36 @@ function initializeTableControls(table, searchContainer, closeTableBtn, showReco
 
         searchContainer.style.display = 'block';
         drawRecommendations(bookId);
+    });
+
+    // Add pagination handlers
+    document.querySelectorAll('.pagination').forEach(pagination => {
+        const prevButton = pagination.querySelector('.prev-page');
+        const nextButton = pagination.querySelector('.next-page');
+
+        prevButton.addEventListener('click', function() {
+            if (currentPage > 1) {
+                currentPage--;
+                if (currentTableType === 'client') {
+                    drawTable();
+                } else {
+                    const bookId = document.getElementById('recommendationBookId').value;
+                    drawRecommendations(bookId);
+                }
+            }
+        });
+
+        nextButton.addEventListener('click', function() {
+            if (currentPage < totalPages) {
+                currentPage++;
+                if (currentTableType === 'client') {
+                    drawTable();
+                } else {
+                    const bookId = document.getElementById('recommendationBookId').value;
+                    drawRecommendations(bookId);
+                }
+            }
+        });
     });
 }
 
