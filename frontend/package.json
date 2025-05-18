@@ -28,8 +28,10 @@
     "transform": {
       "^.+\\.js$": "babel-jest"
     },
-    "moduleNameMapper": {
-      "^../app/(.*)$": "<rootDir>/../app/$1"
-    }
+    "collectCoverageFrom": [
+      "app/**/*.js",
+      "!**/node_modules/**"
+    ],
+    "coverageDirectory": "coverage/"
   }
 }

@@ -181,3 +181,8 @@ unused/
 cloud-init.txt
 deploy/grafana_provisioning
 deploy/yandex-tank/logs
+
+
+frontend/node_modules
+coverage/
+package-lock.json

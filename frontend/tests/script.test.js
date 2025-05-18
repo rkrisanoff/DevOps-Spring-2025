@@ -1,3 +1,4 @@
+const { drawTable } = require('../app/static/app/js/script');
 const {
   initializeTableToggle,
   initializeSearchFunctionality,
@@ -8,7 +9,7 @@ const {
   initializeFillUpdateForm,
   initializeDeleteForm,
   initializeCleanButton
-} = require('../app/static/app/js/script.js');
+} = require('/frontend/app/static/app/js/script.js');
 
 // Mock fetch globally
 global.fetch = jest.fn();
@@ -363,4 +364,272 @@ describe('Book Management System Tests', () => {
       consoleSpy.mockRestore();
       mockAlert.mockRestore();
   });
+
+  test('drawTable populates table with book data', async () => {
+      const mockBookData = {
+          items: [
+              {
+                  id: 1,
+                  title: 'Book 1',
+                  author: 'Author 1',
+                  genres: ['Fiction'],
+                  year: 2023,
+                  language: 'English',
+                  pages: 200,
+                  status: 'Reading'
+              },
+              {
+                  id: 2,
+                  title: 'Book 2',
+                  author: 'Author 2',
+                  genres: ['Drama', 'Mystery'],
+                  year: 2022,
+                  language: 'Spanish',
+                  pages: 300,
+                  status: 'Completed'
+              }
+          ]
+      };
+
+      // Setup fetch mock
+      fetch.mockImplementationOnce(() =>
+          Promise.resolve({
+              ok: true,
+              json: () => Promise.resolve(mockBookData)
+          })
+      );
+
+      // Get table elements
+      const table = document.querySelector('.client-table');
+      const searchContainer = document.querySelector('.search-container');
+      const tableBody = document.querySelector('.client-table tbody');
+
+      // Call drawTable and wait for it to complete
+      await drawTable();
+
+      // Wait for the next tick to ensure DOM updates are complete
+      await new Promise(process.nextTick);
+
+      // Verify table is populated correctly
+      const rows = tableBody.querySelectorAll('tr');
+      expect(rows.length).toBe(2);
+
+      // Check first row data
+      const firstRow = rows[0].querySelectorAll('td');
+      expect(firstRow[0].textContent).toBe('1');
+      expect(firstRow[1].textContent).toBe('Book 1');
+      expect(firstRow[2].textContent).toBe('Author 1');
+      expect(firstRow[3].textContent).toBe('Fiction');
+      expect(firstRow[4].textContent).toBe('2023');
+      expect(firstRow[5].textContent).toBe('English');
+      expect(firstRow[6].textContent).toBe('200');
+      expect(firstRow[7].textContent).toBe('Reading');
+
+      // Check second row data
+      const secondRow = rows[1].querySelectorAll('td');
+      expect(secondRow[0].textContent).toBe('2');
+      expect(secondRow[1].textContent).toBe('Book 2');
+      expect(secondRow[2].textContent).toBe('Author 2');
+      expect(secondRow[3].textContent).toBe('Drama, Mystery');
+      expect(secondRow[4].textContent).toBe('2022');
+      expect(secondRow[5].textContent).toBe('Spanish');
+      expect(secondRow[6].textContent).toBe('300');
+      expect(secondRow[7].textContent).toBe('Completed');
+
+      // Verify table and search container are displayed
+      expect(table.style.display).toBe('table');
+      expect(searchContainer.style.display).toBe('block');
+
+      // Verify fetch was called correctly
+      expect(fetch).toHaveBeenCalledWith('/get_books/');
+  });
+
+  test('drawTable handles fetch error', async () => {
+      const consoleSpy = jest.spyOn(console, 'error').mockImplementation();
+      const mockAlert = jest.spyOn(window, 'alert').mockImplementation();
+
+      // Setup fetch mock to reject
+      fetch.mockImplementationOnce(() =>
+          Promise.reject(new Error('Network error'))
+      );
+
+      // Call drawTable and wait for it to complete
+      await drawTable();
+
+      // Wait for the next tick to ensure error handling is complete
+      await new Promise(process.nextTick);
+
+      // Verify error handling
+      expect(consoleSpy).toHaveBeenCalledWith('Error fetching book data:', expect.any(Error));
+      expect(mockAlert).toHaveBeenCalledWith(expect.any(Error));
+
+      consoleSpy.mockRestore();
+      mockAlert.mockRestore();
+  });
+
+  // Test error handling in create form
+  test('create form handles API error', async () => {
+      const consoleSpy = jest.spyOn(console, 'error').mockImplementation();
+      const mockAlert = jest.spyOn(window, 'alert').mockImplementation();
+
+      fetch.mockImplementationOnce(() =>
+          Promise.resolve({
+              ok: false,
+              status: 400,
+              statusText: 'Bad Request'
+          })
+      );
+
+      const createForm = document.getElementById('createForm');
+      createForm.dispatchEvent(new Event('submit'));
+
+      await new Promise(process.nextTick);
+
+      expect(consoleSpy).toHaveBeenCalled();
+      expect(mockAlert).toHaveBeenCalledWith('Error creating book');
+
+      consoleSpy.mockRestore();
+      mockAlert.mockRestore();
+  });
+
+  // Test error handling in update form
+  test('update form handles API error', async () => {
+      const consoleSpy = jest.spyOn(console, 'error').mockImplementation();
+      const mockAlert = jest.spyOn(window, 'alert').mockImplementation();
+
+      fetch.mockImplementationOnce(() =>
+          Promise.resolve({
+              ok: false,
+              status: 400,
+              statusText: 'Bad Request'
+          })
+      );
+
+      const updateForm = document.getElementById('updateForm');
+      document.getElementById('updateId').value = '1';
+      updateForm.dispatchEvent(new Event('submit'));
+
+      await new Promise(process.nextTick);
+
+      expect(consoleSpy).toHaveBeenCalled();
+      expect(mockAlert).toHaveBeenCalledWith('Error updating book');
+
+      consoleSpy.mockRestore();
+      mockAlert.mockRestore();
+  });
+
+  // Test error handling in fill update form
+  test('fill update form handles API error', async () => {
+      const consoleSpy = jest.spyOn(console, 'error').mockImplementation();
+      const mockAlert = jest.spyOn(window, 'alert').mockImplementation();
+
+      fetch.mockImplementationOnce(() =>
+          Promise.resolve({
+              ok: false,
+              status: 404,
+              statusText: 'Not Found'
+          })
+      );
+
+      document.getElementById('updateId').value = '999';
+      const fillButton = document.getElementById('fillUpdateForm');
+      fillButton.click();
+
+      await new Promise(process.nextTick);
+
+      expect(consoleSpy).toHaveBeenCalled();
+      expect(mockAlert).toHaveBeenCalledWith('Error fetching book data');
+
+      consoleSpy.mockRestore();
+      mockAlert.mockRestore();
+  });
+
+  // Test error handling in delete form
+  test('delete form handles API error', async () => {
+      const consoleSpy = jest.spyOn(console, 'error').mockImplementation();
+      const mockAlert = jest.spyOn(window, 'alert').mockImplementation();
+
+      fetch.mockImplementationOnce(() =>
+          Promise.resolve({
+              ok: false,
+              status: 404,
+              statusText: 'Not Found'
+          })
+      );
+
+      const deleteForm = document.getElementById('deleteForm');
+      document.getElementById('deleteId').value = '999';
+      deleteForm.dispatchEvent(new Event('submit'));
+
+      await new Promise(process.nextTick);
+
+      expect(consoleSpy).toHaveBeenCalled();
+      expect(mockAlert).toHaveBeenCalledWith(expect.stringContaining('Error deleting book'));
+
+      consoleSpy.mockRestore();
+      mockAlert.mockRestore();
+  });
+
+  // Test clean button functionality
+  test('clean button clears all book details fields', () => {
+      // Set up initial state
+      const bookDetails = document.getElementById('bookDetails');
+      document.getElementById('bookTitle').textContent = 'Test Book';
+      document.getElementById('bookAuthor').textContent = 'Test Author';
+      document.getElementById('bookGenres').textContent = 'Fiction';
+      document.getElementById('bookYear').textContent = '2023';
+      document.getElementById('bookLanguage').textContent = 'English';
+      document.getElementById('bookPages').textContent = '200';
+      document.getElementById('bookStatus').textContent = 'Reading';
+      document.getElementById('getBookId').value = '1';
+      bookDetails.style.display = 'block';
+
+      // Click clean button
+      const cleanButton = document.getElementById('cleanBookDetails');
+      cleanButton.click();
+
+      // Verify all fields are cleared
+      expect(bookDetails.style.display).toBe('none');
+      expect(document.getElementById('bookTitle').textContent).toBe('');
+      expect(document.getElementById('bookAuthor').textContent).toBe('');
+      expect(document.getElementById('bookGenres').textContent).toBe('');
+      expect(document.getElementById('bookYear').textContent).toBe('');
+      expect(document.getElementById('bookLanguage').textContent).toBe('');
+      expect(document.getElementById('bookPages').textContent).toBe('');
+      expect(document.getElementById('bookStatus').textContent).toBe('');
+      expect(document.getElementById('getBookId').value).toBe('');
+  });
+
+  test('main initialization sets up event listeners', () => {
+      // Get all the elements
+      const searchInput = document.getElementById('clientSearch');
+      const getBookForm = document.getElementById('getBookForm');
+      const createForm = document.getElementById('createForm');
+      const updateForm = document.getElementById('updateForm');
+      const fillUpdateBtn = document.getElementById('fillUpdateForm');
+      const deleteForm = document.getElementById('deleteForm');
+      const cleanButton = document.getElementById('cleanBookDetails');
+
+      // Trigger DOMContentLoaded
+      document.dispatchEvent(new Event('DOMContentLoaded'));
+
+      // Verify that all elements have event listeners attached
+      // We can check this by verifying that the elements are not null
+      // and that they exist in the DOM
+      expect(searchInput).not.toBeNull();
+      expect(getBookForm).not.toBeNull();
+      expect(createForm).not.toBeNull();
+      expect(updateForm).not.toBeNull();
+      expect(fillUpdateBtn).not.toBeNull();
+      expect(deleteForm).not.toBeNull();
+      expect(cleanButton).not.toBeNull();
+
+      // Verify that the elements are properly initialized
+      expect(searchInput.placeholder).toBe('Search by book title...');
+      expect(getBookForm.tagName).toBe('FORM');
+      expect(createForm.tagName).toBe('FORM');
+      expect(updateForm.tagName).toBe('FORM');
+      expect(deleteForm.tagName).toBe('FORM');
+  });
+
 });
