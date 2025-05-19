@@ -101,7 +101,7 @@ jobs:
       - name: Run Backend Tests
         run: |
           cd backend/
-          uv run pytest --cov . --cov-report=xml:coverage/coverage.xml
+          LITESTAR_WARN_IMPLICIT_SYNC_TO_THREAD=0 uv run pytest --cov . --cov-report=term --cov-report=xml:coverage/coverage.xml
       - name: Upload Backend coverage
         uses: actions/upload-artifact@v4
         with:
@@ -123,7 +123,7 @@ jobs:
       - name: Run Embedder Tests
         run: |
           cd embedder/
-          uv run pytest --cov . --cov-report=xml:coverage/coverage.xml
+          LITESTAR_WARN_IMPLICIT_SYNC_TO_THREAD=0 uv run pytest --cov . --cov-report=term --cov-report=xml:coverage/coverage.xml
       - name: Upload Embedder coverage
         uses: actions/upload-artifact@v4
         with:
