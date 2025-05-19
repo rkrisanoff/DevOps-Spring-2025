@@ -83,6 +83,12 @@ PROJECT_JSON=$(
         --data-urlencode "project=$PROJECT_NAME"
 )
 
+SET_BRANCH_JSON=$(
+    curl -X POST -u $SONAR_USER:$SONAR_PASSWORD "http://$SONAR_HOST_PORT/api/project_branches/rename" \
+        --data-urlencode "project=$PROJECT_NAME" \
+        --data-urlencode "name=lab4"
+)
+
 SONAR_PROJECT_TOKEN_JSON=$(
     curl -X POST -u $SONAR_USER:$SONAR_PASSWORD "http://$SONAR_HOST_PORT/api/user_tokens/generate" \
         --data-urlencode "login=$SONAR_USER" \
@@ -91,3 +97,19 @@ SONAR_PROJECT_TOKEN_JSON=$(
 
 SONAR_PROJECT_TOKEN=$(echo "$SONAR_PROJECT_TOKEN_JSON" | jq -r '.token')
 echo "Token: $SONAR_PROJECT_TOKEN"
+
+# Setup custom Quality Gate
+QUALITY_GATE="devops-qg"
+curl -X POST -u $SONAR_USER:$SONAR_PASSWORD "http://$SONAR_HOST_PORT/api/qualitygates/copy" \
+     --data-urlencode "name=$QUALITY_GATE" \
+     --data-urlencode "sourceName=Sonar way"
+
+curl -X POST -u $SONAR_USER:$SONAR_PASSWORD "http://$SONAR_HOST_PORT/api/qualitygates/create_condition" \
+     --data-urlencode "gateName=$QUALITY_GATE" \
+     --data-urlencode "metric=coverage" \
+     --data-urlencode "op=LT" \
+     --data-urlencode "error=80"
+
+curl -X POST -u $SONAR_USER:$SONAR_PASSWORD "http://$SONAR_HOST_PORT/api/qualitygates/select" \
+     --data-urlencode "gateName=$QUALITY_GATE" \
+     --data-urlencode "projectKey=$PROJECT_NAME"

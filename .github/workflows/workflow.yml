@@ -149,3 +149,43 @@ jobs:
           fi
 
           echo "All coverage reports are present!"
+
+  sonarqube:
+    needs: [verify-coverage]
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+
+    - name: Download JavaScript coverage
+      uses: actions/download-artifact@v4
+      with:
+        name: js-coverage
+        path: frontend/coverage
+    - name: Download Django coverage
+      uses: actions/download-artifact@v4
+      with:
+        name: django-coverage
+        path: frontend/coverage
+    - name: Download Backend coverage
+      uses: actions/download-artifact@v4
+      with:
+        name: backend-coverage
+        path: backend/coverage
+
+    - name: SonarQube Scan
+      uses: SonarSource/sonarqube-scan-action@v5.2.0
+      env:
+        SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+        SONAR_HOST_URL: ${{ secrets.SONAR_URL }}
+
+    - name: SonarQube Quality Gate check
+      id: sonarqube-quality-gate-check
+      uses: sonarsource/sonarqube-quality-gate-action@v1.1.0
+      env:
+        SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+        SONAR_HOST_URL: ${{ secrets.SONAR_URL }}
+
+    - name: Quality Status
+      run: echo "The Quality Gate status is ${{ steps.sonarqube-quality-gate-check.outputs.quality-gate-status }}"
