@@ -1,5 +1,5 @@
-name: Code Clean-up
-run-name:  Clean up push action at ${{ github.ref }}
+name: Tests & CodeQuality Workflow
+run-name:  Tests & CodeQuality workflow at ${{ github.ref }}
 on: [push]
 jobs:
   checking:
@@ -108,6 +108,7 @@ jobs:
           name: backend-coverage
           path: backend/coverage/coverage.xml
           retention-days: 1
+
   test-embedder:
     needs: [checking]
     runs-on: ubuntu-latest
@@ -184,9 +185,57 @@ jobs:
 
           echo "All coverage reports are present!"
 
-  sonarqube:
-    needs: [verify-coverage]
+  setup-remote-info:
     runs-on: ubuntu-latest
+    outputs:
+      monitoring-ip: ${{ steps.monitoring-ip-getter.outputs.value}}
+      sonar-token: ${{steps.sonar-token-getter.outputs.value}}
+    steps:
+      - name: Install yc
+        run: |
+          curl https://storage.yandexcloud.net/yandexcloud-yc/install.sh | bash -s -- -i /opt/yc
+          source "/home/runner/.bashrc"
+
+      - name: List All Compute Instances
+        run: |
+          /opt/yc/bin/yc \
+            --token ${{ secrets.YC_OATH_TOKEN }} \
+            --folder-id ${{ secrets.YC_FOLDER_ID }} \
+            --cloud-id ${{ secrets.YC_CLOUD_ID }} \
+            compute instance list
+
+      - name: Get Monitoring-VM IP
+        id: monitoring-ip-getter
+        run: |
+          JSON_RESPONSE=$(
+            /opt/yc/bin/yc \
+              --token ${{ secrets.YC_OATH_TOKEN }} \
+              --folder-id ${{ secrets.YC_FOLDER_ID }} \
+              --cloud-id ${{ secrets.YC_CLOUD_ID }} \
+              compute instance get monitoring-vm --format json
+          )
+          MONITORING_IP=$(echo "$JSON_RESPONSE" | jq -r '.network_interfaces[0].primary_v4_address.one_to_one_nat.address')
+          echo "value=$MONITORING_IP" >> $GITHUB_OUTPUT
+
+      - name: Get Sonar Token
+        id: sonar-token-getter
+        # вытаскиваю переменную из соседнего step'а
+        env:
+          MONITORING_IP: ${{ steps.monitoring-ip-getter.outputs.value }}
+        run: |
+          mkdir -vm 700 /home/runner/.ssh
+          ssh-keyscan -Ht ed25519 $MONITORING_IP > /home/runner/.ssh/known_hosts
+          echo "${{ secrets.SSH_KEY }}" > /home/runner/.ssh/id_ed25519
+          chmod 600 /home/runner/.ssh/id_ed25519
+          scp ubuntu@$MONITORING_IP:/home/ubuntu/sonar_token.txt /home/runner/sonar_token.txt
+          echo "value=$(cat /home/runner/sonar_token.txt)" >> $GITHUB_OUTPUT
+
+  sonarqube:
+    runs-on: ubuntu-latest
+    needs: [verify-coverage, setup-remote-info]
+    env:
+      SONAR_HOST_URL: http://${{needs.setup-remote-info.outputs.monitoring-ip}}:9000
+      SONAR_TOKEN: ${{needs.setup-remote-info.outputs.sonar-token}}
     steps:
     - uses: actions/checkout@v4
       with:
@@ -213,18 +262,15 @@ jobs:
         name: embedder-coverage
         path: embedder/coverage
 
+    - name: Echo Vars
+      run: echo "Sonar URL $SONAR_HOST_URL, SonarQube Token $SONAR_TOKEN"
+
     - name: SonarQube Scan
       uses: SonarSource/sonarqube-scan-action@v5.2.0
-      env:
-        SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-        SONAR_HOST_URL: ${{ secrets.SONAR_URL }}
 
     - name: SonarQube Quality Gate check
       id: sonarqube-quality-gate-check
       uses: sonarsource/sonarqube-quality-gate-action@v1.1.0
-      env:
-        SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-        SONAR_HOST_URL: ${{ secrets.SONAR_URL }}
 
     - name: Quality Status
       run: echo "The Quality Gate status is ${{ steps.sonarqube-quality-gate-check.outputs.quality-gate-status }}"
