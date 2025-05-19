@@ -3,7 +3,6 @@ from typing import Any
 
 import requests
 import requests.api
-import sqlalchemy
 from litestar import Controller, delete, get, patch, post
 from litestar.dto import DataclassDTO, DTOConfig, DTOData
 from litestar.exceptions import HTTPException
@@ -12,8 +11,9 @@ from litestar.params import Parameter
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from booker.domain.entities import BookGenre
+from booker.domain.entities import BookGenre, book_genre_map
 from booker.domain.models import Book
+from booker.service.book import BookService
 from booker.settings import WebServerConfig
 
 
@@ -135,47 +135,12 @@ class BooksController(Controller):
                 status_code=404, detail=f"Книга с ID {book_id} не найдена"
             ) from None
 
-        query = sqlalchemy.text("""
-WITH target_book_embedding AS (
-    SELECT
-        embedding AS reference_embedding
-    FROM
-        book
-    WHERE
-        id = :book_id
-)
-
-SELECT
-    main_book.id                     AS id,
-    main_book.title                  AS title,
-    main_book.author                 AS author,
-    main_book.genres                 AS genres,
-    main_book.pages                  AS pages,
-    main_book.year                   AS publication_year,
-    1 - (main_book.embedding <=> target_book_embedding.reference_embedding) AS similarity
-FROM
-    book AS main_book
-
-CROSS JOIN
-    target_book_embedding
-WHERE main_book.id != :book_id
-ORDER BY
-    similarity DESC
-LIMIT :limit
-OFFSET :offset
-;
-""")
-        result = await session.execute(
-            query,
-            {
-                "book_id": book_id,
-                "limit": limit,
-                "offset": offset,
-            },
+        similar_books = await BookService.get_similar(
+            book_id=book_id, limit=limit, offset=offset, session=session
         )
 
         count_result = await session.execute(select(Book))
-        total_similar = len(count_result.scalars().all()) - 1
+        total = len(count_result.scalars().all()) - 1
 
         return {
             "target_book": {
@@ -187,23 +152,24 @@ OFFSET :offset
                 "language": book.language,
                 "pages": book.pages,
             },
-            "similar_books": [row._asdict() for row in result],
+            "similar_books": similar_books,
             "limit": limit,
             "offset": offset,
-            "total": total_similar,
+            "total": total,
         }
 
     @post(dto=BookWriteDTO)
     async def create_book(
-        self, config: WebServerConfig, session: AsyncSession, data: DTOData[BookDTO]
+        self,
+        config: WebServerConfig,
+        session: AsyncSession,
+        data: DTOData[BookDTO],
     ) -> BookDTO:
         try:
             book = Book(**data.as_builtins())
-
             # Да, это кринж, но это +- приблизительно работает
             relevant_representation = f"""{book.title} was written by {book.author} in {book.year} on {book.language}.
-                Genres are {" ".join(book.genres)}"""
-
+                Genres are {" ".join([book_genre_map.get(genre, genre) for genre in book.genres])}"""
             response = requests.get(
                 f"{config.embedder.endpoint}/api/v1/infer/embedding",
                 params={"sentences": [relevant_representation]},
@@ -233,7 +199,7 @@ OFFSET :offset
 
         except Exception as e:
             await session.rollback()
-            raise HTTPException(status_code=500, detail=str(e)) from None
+            raise HTTPException(status_code=500, detail=str(e)) from e
 
     @patch("/{book_id:int}", dto=BookPatchDTO)
     async def update_book(

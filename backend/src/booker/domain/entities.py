@@ -27,3 +27,26 @@ class Status(enum.StrEnum):
     TODO = "todo"
     READING = "reading"
     FINISHED = "finished"
+
+
+book_genre_map = {
+    "fiction": "Fiction",
+    "nonfiction": "Non-fiction",
+    "mystery": "Mystery",
+    "thriller": "Thriller",
+    "romance": "Romance",
+    "science_fiction": "Science Fiction",
+    "fantasy": "Fantasy",
+    "horror": "Horror",
+    "historical_fiction": "Historical Fiction",
+    "biography": "Biography",
+    "memoir": "Memoir",
+    "poetry": "Poetry",
+    "young_adult": "Young Adult",
+    "childrens": "Children's",
+    "adventure": "Adventure",
+    "crime_fiction": "Crime Fiction",
+    "philosophy": "Philosophy",
+    "history": "History",
+    "graphic_novel": "Graphic Novel",
+}

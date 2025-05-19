@@ -13,6 +13,9 @@ from booker.settings import WebServerConfig
 
 
 def create_server(config: WebServerConfig) -> Litestar:
+    async def get_config() -> WebServerConfig:
+        return config
+
     cors_config = CORSConfig(
         allow_origins=["*"],  # В продакшене следует ограничить
         allow_methods=["GET", "POST", "PATCH", "PUT", "DELETE", "OPTIONS"],
@@ -42,7 +45,7 @@ def create_server(config: WebServerConfig) -> Litestar:
 
     app = Litestar(
         route_handlers=[get_version, root_router, PrometheusController],
-        dependencies={"config": lambda: config, "session": provide_session},
+        dependencies={"config": get_config, "session": provide_session},
         cors_config=cors_config,
         openapi_config=openapi_config,
         debug=True,
