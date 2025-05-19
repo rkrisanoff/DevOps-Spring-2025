@@ -165,53 +165,6 @@ async def test_get_book_not_found(client: TestClient, mock_session):
     assert "не найдена" in response.json()["detail"]
 
 
-# @pytest.mark.asyncio
-# async def test_create_book(client: TestClient, mock_session, mock_config):
-#     # Arrange
-#     book_data = {
-#         "title": "New Book",
-#         "author": "New Author",
-#         "genres": [BookGenre.FICTION.value],
-#         "year": 2024,
-#         "language": "English",
-#         "pages": 250,
-#         "status": Status.TODO.value,
-#     }
-
-#     # Mock DTOData
-#     mock_dto = MagicMock()
-#     mock_dto.as_builtins.return_value = book_data
-
-#     # Mock session operations
-#     mock_session.add = AsyncMock()
-#     mock_session.commit = AsyncMock()
-#     mock_session.refresh = AsyncMock()
-
-#     # Mock embedding service response
-#     mock_response = MagicMock()
-#     mock_response.ok = True
-#     mock_response.json.return_value = [[0.1, 0.2, 0.3]]
-
-#     with patch("booker.api.rest.controllers.books.requests.get", return_value=mock_response), \
-#          patch("booker.api.rest.controllers.books.DTOData", return_value=mock_dto):
-#         # Act
-#         response = client.post("/books", json=book_data)
-
-#         # Assert
-#         assert response.status_code == 201
-#         data = response.json()
-#         assert data["title"] == book_data["title"]
-#         assert data["author"] == book_data["author"]
-#         assert data["genres"] == book_data["genres"]
-#         assert data["year"] == book_data["year"]
-#         assert data["language"] == book_data["language"]
-#         assert data["pages"] == book_data["pages"]
-#         assert data["status"] == book_data["status"]
-#         assert mock_session.add.called
-#         assert mock_session.commit.called
-#         assert mock_session.refresh.called
-
-
 @pytest.mark.asyncio
 async def test_create_book_error(client: TestClient, mock_session, mock_config):
     # Arrange
@@ -369,14 +322,23 @@ async def test_delete_book(client: TestClient, mock_session, test_book):
 
 @pytest.mark.asyncio
 async def test_delete_book_not_found(client: TestClient, mock_session):
-    # Arrange
     result = MagicMock()
     result.scalar_one_or_none.return_value = None
     mock_session.execute.return_value = result
 
-    # Act
     response = client.delete("/books/999")
 
-    # Assert
+    assert response.status_code == 404
+    assert "не найдена" in response.json()["detail"]
+
+
+@pytest.mark.asyncio
+async def test_get_similar_books_not_found(client: TestClient, mock_session):
+    result = MagicMock()
+    result.scalar_one_or_none.return_value = None
+    mock_session.execute.return_value = result
+
+    response = client.get("/books/999/similar")
+
     assert response.status_code == 404
     assert "не найдена" in response.json()["detail"]
