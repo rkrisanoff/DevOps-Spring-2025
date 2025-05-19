@@ -108,9 +108,31 @@ jobs:
           name: backend-coverage
           path: backend/coverage/coverage.xml
           retention-days: 1
+  test-embedder:
+    needs: [checking]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install the latest version of uv
+        uses: astral-sh/setup-uv@v5
+      - name: Setup libraries
+        run: |
+          cd embedder/
+          uv sync
+          uv pip install --editable '.[dev]'
+      - name: Run Embedder Tests
+        run: |
+          cd embedder/
+          uv run pytest --cov . --cov-report=xml:coverage/coverage.xml
+      - name: Upload Embedder coverage
+        uses: actions/upload-artifact@v4
+        with:
+          name: embedder-coverage
+          path: embedder/coverage/coverage.xml
+          retention-days: 1
 
   verify-coverage:
-    needs: [test-frontend-javascript, test-frontend-django, test-backend]
+    needs: [test-frontend-javascript, test-frontend-django, test-backend, test-embedder]
     runs-on: ubuntu-latest
     steps:
       - name: Download JavaScript coverage
@@ -128,6 +150,12 @@ jobs:
         with:
           name: backend-coverage
           path: backend/coverage
+      - name: Download Embedder coverage
+        uses: actions/download-artifact@v4
+        with:
+          name: embedder-coverage
+          path: embedder/coverage
+
       - name: Check coverage reports existence
         run: |
           # Check Frontend JavaScript coverage
@@ -145,6 +173,12 @@ jobs:
           # Check Backend Test coverage
           if [ ! -f "backend/coverage/coverage.xml" ]; then
             echo "Backend coverage report not found!"
+            exit 1
+          fi
+
+          # Check Embedder Test coverage
+          if [ ! -f "embedder/coverage/coverage.xml" ]; then
+            echo "Embedder coverage report not found!"
             exit 1
           fi
 
@@ -173,6 +207,11 @@ jobs:
       with:
         name: backend-coverage
         path: backend/coverage
+    - name: Download Embedder coverage
+      uses: actions/download-artifact@v4
+      with:
+        name: embedder-coverage
+        path: embedder/coverage
 
     - name: SonarQube Scan
       uses: SonarSource/sonarqube-scan-action@v5.2.0
