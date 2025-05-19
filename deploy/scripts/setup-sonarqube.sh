@@ -97,6 +97,7 @@ SONAR_PROJECT_TOKEN_JSON=$(
 
 SONAR_PROJECT_TOKEN=$(echo "$SONAR_PROJECT_TOKEN_JSON" | jq -r '.token')
 echo "Token: $SONAR_PROJECT_TOKEN"
+echo "$SONAR_PROJECT_TOKEN" >> /home/ubuntu/sonar_token.txt
 
 # Setup custom Quality Gate
 QUALITY_GATE="devops-qg"
