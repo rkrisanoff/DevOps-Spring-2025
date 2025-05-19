@@ -10,7 +10,7 @@ const {
   initializeFillUpdateForm,
   initializeDeleteForm,
   initializeCleanButton
-}= require('/frontend/app/static/app/js/script.js');
+}= require('../app/static/app/js/script.js');
 
 // Mock fetch globally
 global.fetch = jest.fn();

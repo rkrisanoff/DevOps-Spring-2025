@@ -38,7 +38,8 @@ jobs:
         run: |
           sleep 5
           curl -f http://localhost:8005/frontend_health_check/  # Проверка доступности
-  test-frontend:
+
+  test-frontend-javascript:
     needs: [build-frontend]
     runs-on: ubuntu-latest
     steps:
@@ -49,14 +50,43 @@ jobs:
           node-version: 22
       - name: Install all necessary packages
         run: |
-          cd frontend/tests
+          cd frontend/
           npm install
       - name: Run tests
         run: |
-          cd frontend/tests
-          npm test
+          cd frontend/
+          npm test -- --coverage
+      - name: Upload JavaScript coverage
+        uses: actions/upload-artifact@v4
+        with:
+          name: js-coverage
+          path: frontend/coverage/
+          retention-days: 1
 
-  backend-tests:
+  test-frontend-django:
+    needs: [build-frontend]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install the latest version of uv
+        uses: astral-sh/setup-uv@v5
+      - name: Setup libraries
+        run: |
+          cd frontend/
+          uv sync
+          uv pip install --editable '.[dev]'
+      - name: Run tests
+        run: |
+          cd frontend/
+          uv run pytest --cov=app --cov-report=xml:coverage/django-coverage.xml app/tests/test_views.py
+      - name: Upload Django coverage
+        uses: actions/upload-artifact@v4
+        with:
+          name: django-coverage
+          path: frontend/coverage/django-coverage.xml
+          retention-days: 1
+
+  test-backend:
     needs: [checking]
     runs-on: ubuntu-latest
     steps:
@@ -71,4 +101,51 @@ jobs:
       - name: Run Backend Tests
         run: |
           cd backend/
-          uv run pytest --cov tests/ -v
+          uv run pytest --cov . --cov-report=xml:coverage/coverage.xml
+      - name: Upload Backend coverage
+        uses: actions/upload-artifact@v4
+        with:
+          name: backend-coverage
+          path: backend/coverage/coverage.xml
+          retention-days: 1
+
+  verify-coverage:
+    needs: [test-frontend-javascript, test-frontend-django, test-backend]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download JavaScript coverage
+        uses: actions/download-artifact@v4
+        with:
+          name: js-coverage
+          path: frontend/coverage
+      - name: Download Django coverage
+        uses: actions/download-artifact@v4
+        with:
+          name: django-coverage
+          path: frontend/coverage
+      - name: Download Backend coverage
+        uses: actions/download-artifact@v4
+        with:
+          name: backend-coverage
+          path: backend/coverage
+      - name: Check coverage reports existence
+        run: |
+          # Check Frontend JavaScript coverage
+          if [ ! -f "frontend/coverage/lcov.info" ]; then
+            echo "Frontend JavaScript coverage report not found!"
+            exit 1
+          fi
+
+          # Check Frontend Django coverage
+          if [ ! -f "frontend/coverage/django-coverage.xml" ]; then
+            echo "Frontend Django coverage report not found!"
+            exit 1
+          fi
+
+          # Check Backend Test coverage
+          if [ ! -f "backend/coverage/coverage.xml" ]; then
+            echo "Backend coverage report not found!"
+            exit 1
+          fi
+
+          echo "All coverage reports are present!"
