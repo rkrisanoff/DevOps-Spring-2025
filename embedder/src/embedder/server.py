@@ -42,7 +42,6 @@ def create_server() -> Litestar:
 
     app = Litestar(
         route_handlers=[get_version, root_router, PrometheusController],
-        # dependencies={"config": lambda: config,},
         cors_config=cors_config,
         openapi_config=openapi_config,
         debug=True,
@@ -56,7 +55,6 @@ def create_server() -> Litestar:
 @click.option("--host", default="0.0.0.0", help="Хост для запуска сервера")
 @click.option("--port", default=9999, help="Порт для запуска сервера")
 def run(host: str, port: int) -> None:
-    # config = environ.to_config(WebServerConfig)
     app = create_server()
 
     uvicorn.run(

@@ -22,7 +22,6 @@ RUN mkdir -p /models
 RUN uv run python - <<'EOF'
 from sentence_transformers import SentenceTransformer
 SentenceTransformer("all-MiniLM-L6-v2")
-print("Модель all-MiniLM-L6-v2 загружена в кэш.")
 EOF
 
 EXPOSE 9999

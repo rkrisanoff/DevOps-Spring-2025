@@ -23,6 +23,17 @@ dependencies = [
     "uvicorn==0.34.*",
 ]
 
+[dependency-groups]
+dev = [
+    "dotenv==0.9.*",
+    "mypy==1.15.*",
+    "pre-commit==4.1.*",
+    "pytest==8.3.*",
+    "pytest-asyncio==0.25.*",
+    "pytest-cov==6.0.*",
+    "ruff==0.9.*",
+]
+
 [[tool.uv.index]]
 name = "pytorch-cpu"
 url  = "https://download.pytorch.org/whl/cpu"
@@ -39,3 +50,11 @@ torchvision = [{ index = "pytorch-cpu" }]
 
 [project.scripts]
 run_server = "embedder.server:run"
+
+
+
+[tool.coverage.run]
+omit = [
+    # omit pytorch-generated files in /tmp
+    "/tmp/*",
+]
