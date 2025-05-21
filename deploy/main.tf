@@ -16,7 +16,7 @@ resource "yandex_compute_disk" "boot-disk" {
   name     = "book-app-drive"
   type     = "network-ssd"
   zone     = "ru-central1-a"
-  size     = "10"
+  size     = "30"
   image_id = "fd85m9q2qspfnsv055rh"
 }
 
@@ -52,7 +52,7 @@ resource "yandex_compute_disk" "monitoring-boot-disk" {
   name     = "monitoring-drive"
   type     = "network-ssd"
   zone     = "ru-central1-a"
-  size     = "10"
+  size     = "20"
   image_id = "fd85m9q2qspfnsv055rh"
 }
 
@@ -64,8 +64,8 @@ resource "yandex_compute_instance" "monitoring-vm" {
   zone                      = "ru-central1-a"
 
   resources {
-    cores  = 4
-    memory = 4
+    cores  = 8
+    memory = 8
   }
 
   boot_disk {
@@ -102,7 +102,7 @@ resource "null_resource" "prepare_vm" {
     connection {
       type        = "ssh"
       user        = "ubuntu"
-      private_key = file("/home/trisolaris/.ssh/id_rsa")
+      private_key = file("/home/anastasia/.ssh/yandex-cloud")
       host        = yandex_compute_instance.book-app-vm.network_interface[0].nat_ip_address
     }
 
@@ -130,7 +130,7 @@ resource "null_resource" "setup_monitoring" {
   connection {
     type        = "ssh"
     user        = "ubuntu"
-    private_key = file("/home/trisolaris/.ssh/id_rsa")
+    private_key = file("/home/anastasia/.ssh/yandex-cloud")
     host        = yandex_compute_instance.monitoring-vm.network_interface[0].nat_ip_address
   }
 
@@ -157,7 +157,8 @@ resource "null_resource" "setup_monitoring" {
   provisioner "remote-exec" {
     scripts = [
       "scripts/setup-prometheus.sh",
-      "scripts/setup-grafana.sh"
+      "scripts/setup-grafana.sh",
+      "scripts/setup-sonarqube.sh"
     ]
   }
 
