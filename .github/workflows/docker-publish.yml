@@ -29,6 +29,25 @@ jobs:
           KUBERNETES_CLUSTER_VM_IP=$(echo "$JSON_RESPONSE" | jq -r '.network_interfaces[0].primary_v4_address.one_to_one_nat.address')
           echo "value=$KUBERNETES_CLUSTER_VM_IP" >> $GITHUB_OUTPUT
 
+  get-tag-value:
+    runs-on: ubuntu-latest
+    outputs:
+      tag-version: ${{ steps.tag-getter.outputs.value }}
+    steps:
+      - uses: actions/checkout@v2
+      - name: Set output
+        id: tag-getter
+        run: echo "value=${GITHUB_REF#refs/*/}" >> $GITHUB_OUTPUT
+
+  check-tag-value:
+    runs-on: ubuntu-latest
+    needs:  get-tag-value
+    env:
+      TAG: ${{needs.get-tag-value.outputs.tag-version}}
+    steps:
+      - name: Echo Vars
+        run: echo "Tag $TAG"
+
   build-and-publish:
     runs-on: ubuntu-latest
     permissions:
@@ -105,8 +124,9 @@ jobs:
 
   deploy:
     runs-on: ubuntu-latest
-    needs: [setup-kubernetes-cluster-ip-info, build-and-publish]
+    needs: [setup-kubernetes-cluster-ip-info, build-and-publish, get-tag-value]
     env:
+      VERSION: ${{needs.get-tag-value.outputs.tag-version}}
       KUBERNETES_CLUSTER_VM_IP: ${{ needs.setup-kubernetes-cluster-ip-info.outputs.kubernetes-cluster-ip }}
     steps:
       - name: Setup deploying ssh config
@@ -117,6 +137,6 @@ jobs:
           chmod 600 /home/runner/.ssh/id_ed25519
       - name: Deploy everyone
         run: |
-          scp ubuntu@$KUBERNETES_CLUSTER_VM_IP kubectl set image deployment/frontend frontend=ghcr.io/rkrisanoff/devops-spring-2025/frontend:{{version}}
-          scp ubuntu@$KUBERNETES_CLUSTER_VM_IP kubectl set image deployment/backend backend=ghcr.io/rkrisanoff/devops-spring-2025/backend:{{version}}
-          scp ubuntu@$KUBERNETES_CLUSTER_VM_IP kubectl set image deployment/embedder embedder=ghcr.io/rkrisanoff/devops-spring-2025/embedder:{{version}}
+          ssh ubuntu@$KUBERNETES_CLUSTER_VM_IP kubectl set image deployment/frontend frontend=ghcr.io/rkrisanoff/devops-spring-2025/frontend:${VERSION:1}
+          ssh ubuntu@$KUBERNETES_CLUSTER_VM_IP kubectl set image deployment/backend backend=ghcr.io/rkrisanoff/devops-spring-2025/backend:${VERSION:1}
+          ssh ubuntu@$KUBERNETES_CLUSTER_VM_IP kubectl set image deployment/embedder embedder=ghcr.io/rkrisanoff/devops-spring-2025/embedder:${VERSION:1}

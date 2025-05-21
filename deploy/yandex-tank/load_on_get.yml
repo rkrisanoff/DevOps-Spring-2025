@@ -1,5 +1,5 @@
 phantom:
-  address: 51.250.95.73:30200 # [Target's address]:[target's port]
+  address: 51.250.14.212:30200 # [Target's address]:[target's port]
   uris:
     - /
     - /get_books/
@@ -12,6 +12,14 @@ phantom:
     - /get_book/7/
     - /get_book/8/
     - /get_book/9/
+    - /get_book/10/
+    - /get_book/11/
+    - /get_book/12/
+    - /get_book/13/
+    - /get_book/14/
+    - /get_book/15/
+    - /get_book/16/
+    - /get_book/17/
   load_profile:
     load_type: rps # schedule load by defining requests per second
     schedule: line(1, 100, 1m) const (100, 5m)
