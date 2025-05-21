@@ -29,84 +29,95 @@ jobs:
           KUBERNETES_CLUSTER_VM_IP=$(echo "$JSON_RESPONSE" | jq -r '.network_interfaces[0].primary_v4_address.one_to_one_nat.address')
           echo "value=$KUBERNETES_CLUSTER_VM_IP" >> $GITHUB_OUTPUT
 
-  build-and-publish:
+  get-tag-value:
     runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      packages: write
-
+    outputs:
+      tag-version: ${{ steps.tag-gtter.outputs.value }}
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v3
+      - uses: actions/checkout@v2
+      - name: Set output
+        id: tag-getter
+        run: echo "value=${GITHUB_REF#refs/*/}" >> $GITHUB_OUTPUT
 
-      - name: Log in to GitHub Container Registry
-        uses: docker/login-action@v2
-        with:
-          registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
+  # build-and-publish:
+  #   runs-on: ubuntu-latest
+  #   permissions:
+  #     contents: read
+  #     packages: write
 
-      - name: Extract metadata for Backend
-        id: meta-backend
-        uses: docker/metadata-action@v4
-        with:
-          images: ghcr.io/${{ github.repository }}/backend
-          tags: |
-            type=raw,value=latest
-            type=semver,pattern={{version}}
-            type=ref,event=branch
-            type=sha,format=short
-      - name: Build and push Backend image
-        uses: docker/build-push-action@v3
-        with:
-                context: backend
-                push: ${{ github.event_name != 'pull_request' }}
-                tags: ${{ steps.meta-backend.outputs.tags }}
-                labels: ${{ steps.meta-backend.outputs.labels }}
+  #   steps:
+  #     - name: Checkout repository
+  #       uses: actions/checkout@v3
+
+  #     - name: Log in to GitHub Container Registry
+  #       uses: docker/login-action@v2
+  #       with:
+  #         registry: ghcr.io
+  #         username: ${{ github.actor }}
+  #         password: ${{ secrets.GITHUB_TOKEN }}
+
+  #     - name: Extract metadata for Backend
+  #       id: meta-backend
+  #       uses: docker/metadata-action@v4
+  #       with:
+  #         images: ghcr.io/${{ github.repository }}/backend
+  #         tags: |
+  #           type=raw,value=latest
+  #           type=semver,pattern={{version}}
+  #           type=ref,event=branch
+  #           type=sha,format=short
+  #     - name: Build and push Backend image
+  #       uses: docker/build-push-action@v3
+  #       with:
+  #               context: backend
+  #               push: ${{ github.event_name != 'pull_request' }}
+  #               tags: ${{ steps.meta-backend.outputs.tags }}
+  #               labels: ${{ steps.meta-backend.outputs.labels }}
 
 
-      - name: Extract metadata for Embedder
-        id: meta-embedder
-        uses: docker/metadata-action@v4
-        with:
-          images: ghcr.io/${{ github.repository }}/embedder
-          tags: |
-            type=raw,value=latest
-            type=semver,pattern={{version}}
-            type=ref,event=branch
-            type=sha,format=short
-      - name: Build and push Embedder image
-        uses: docker/build-push-action@v3
-        with:
-                context: embedder
-                push: ${{ github.event_name != 'pull_request' }}
-                tags: ${{ steps.meta-embedder.outputs.tags }}
-                labels: ${{ steps.meta-embedder.outputs.labels }}
+  #     - name: Extract metadata for Embedder
+  #       id: meta-embedder
+  #       uses: docker/metadata-action@v4
+  #       with:
+  #         images: ghcr.io/${{ github.repository }}/embedder
+  #         tags: |
+  #           type=raw,value=latest
+  #           type=semver,pattern={{version}}
+  #           type=ref,event=branch
+  #           type=sha,format=short
+  #     - name: Build and push Embedder image
+  #       uses: docker/build-push-action@v3
+  #       with:
+  #               context: embedder
+  #               push: ${{ github.event_name != 'pull_request' }}
+  #               tags: ${{ steps.meta-embedder.outputs.tags }}
+  #               labels: ${{ steps.meta-embedder.outputs.labels }}
 
-      - name: Extract metadata for Frontend
-        id: meta-frontend
-        uses: docker/metadata-action@v4
-        with:
-          images: ghcr.io/${{ github.repository }}/frontend
-          tags: |
-            type=raw,value=latest
-            type=semver,pattern={{version}}
-            type=ref,event=branch
-            type=sha,format=short
+  #     - name: Extract metadata for Frontend
+  #       id: meta-frontend
+  #       uses: docker/metadata-action@v4
+  #       with:
+  #         images: ghcr.io/${{ github.repository }}/frontend
+  #         tags: |
+  #           type=raw,value=latest
+  #           type=semver,pattern={{version}}
+  #           type=ref,event=branch
+  #           type=sha,format=short
 
-      - name: Build and push Frontend image
-        uses: docker/build-push-action@v3
-        with:
-          context: frontend
-          push: ${{ github.event_name != 'pull_request' }}
-          tags: ${{ steps.meta-frontend.outputs.tags }}
-          labels: ${{ steps.meta-frontend.outputs.labels }}
+  #     - name: Build and push Frontend image
+  #       uses: docker/build-push-action@v3
+  #       with:
+  #         context: frontend
+  #         push: ${{ github.event_name != 'pull_request' }}
+  #         tags: ${{ steps.meta-frontend.outputs.tags }}
+  #         labels: ${{ steps.meta-frontend.outputs.labels }}
 
 
   deploy:
     runs-on: ubuntu-latest
-    needs: [setup-kubernetes-cluster-ip-info, build-and-publish]
+    needs: [setup-kubernetes-cluster-ip-info, get-tag-value]
     env:
+      VERSION: ${{needs.get-tag-value.outputs.tag-version}}
       KUBERNETES_CLUSTER_VM_IP: ${{ needs.setup-kubernetes-cluster-ip-info.outputs.kubernetes-cluster-ip }}
     steps:
       - name: Setup deploying ssh config
@@ -117,6 +128,6 @@ jobs:
           chmod 600 /home/runner/.ssh/id_ed25519
       - name: Deploy everyone
         run: |
-          scp ubuntu@$KUBERNETES_CLUSTER_VM_IP kubectl set image deployment/frontend frontend=ghcr.io/rkrisanoff/devops-spring-2025/frontend:{{version}}
-          scp ubuntu@$KUBERNETES_CLUSTER_VM_IP kubectl set image deployment/backend backend=ghcr.io/rkrisanoff/devops-spring-2025/backend:{{version}}
-          scp ubuntu@$KUBERNETES_CLUSTER_VM_IP kubectl set image deployment/embedder embedder=ghcr.io/rkrisanoff/devops-spring-2025/embedder:{{version}}
+          scp ubuntu@$KUBERNETES_CLUSTER_VM_IP kubectl set image deployment/frontend frontend=ghcr.io/rkrisanoff/devops-spring-2025/frontend:$VERSION
+          scp ubuntu@$KUBERNETES_CLUSTER_VM_IP kubectl set image deployment/backend backend=ghcr.io/rkrisanoff/devops-spring-2025/backend:$VERSION
+          scp ubuntu@$KUBERNETES_CLUSTER_VM_IP kubectl set image deployment/embedder embedder=ghcr.io/rkrisanoff/devops-spring-2025/embedder:$VERSION
