@@ -1,4 +1,41 @@
 services:
+
+  postgres:
+    image: pgvector/pgvector:pg17
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_DB=postgres
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./init-vector.sql:/docker-entrypoint-initdb.d/01-init-vector.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+
+  migrator:
+    build:
+      context: backend/
+      dockerfile: ./Dockerfile
+    entrypoint: uv run alembic --config=./etc/alembic.ini upgrade head
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      - ALEMBIC_POSTGRES_DATABASE=postgres
+      - ALEMBIC_POSTGRES_USER=postgres
+      - ALEMBIC_POSTGRES_PASSWORD=postgres
+      - ALEMBIC_POSTGRES_HOST=postgres
+      - ALEMBIC_POSTGRES_PORT=5432
+
+    restart: "no"
+
+
   backend:
     build:
       context: backend/
@@ -40,39 +77,15 @@ services:
       retries: 3
       start_period: 10s
 
-  migrator:
+  bot:
     build:
-      context: backend/
+      context: bot/
       dockerfile: ./Dockerfile
-    entrypoint: uv run alembic --config=./etc/alembic.ini upgrade head
-    depends_on:
-      postgres:
-        condition: service_healthy
-    environment:
-      - ALEMBIC_POSTGRES_DATABASE=postgres
-      - ALEMBIC_POSTGRES_USER=postgres
-      - ALEMBIC_POSTGRES_PASSWORD=postgres
-      - ALEMBIC_POSTGRES_HOST=postgres
-      - ALEMBIC_POSTGRES_PORT=5432
 
-    restart: "no"
-
-  postgres:
-    image: pgvector/pgvector:pg17
     environment:
-      - POSTGRES_USER=postgres
-      - POSTGRES_PASSWORD=postgres
-      - POSTGRES_DB=postgres
-    ports:
-      - "5432:5432"
-    volumes:
-      - postgres_data:/var/lib/postgresql/data
-      - ./init-vector.sql:/docker-entrypoint-initdb.d/01-init-vector.sql:ro
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
+      - BOT_TOKEN=''
+      - BOT_BACKEND_HOST=backend
+      - BOT_BACKEND_PORT=8000
 
   frontend:
     build:

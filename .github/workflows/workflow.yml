@@ -132,8 +132,33 @@ jobs:
           path: embedder/coverage/coverage.xml
           retention-days: 1
 
+  test-bot:
+    needs: [checking]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install the latest version of uv
+        uses: astral-sh/setup-uv@v5
+      - name: Setup libraries
+        run: |
+          cd bot/
+          uv sync
+          uv pip install --editable '.[dev]'
+      - name: Run Bot Tests
+        run: |
+          cd bot/
+          0 uv run pytest --cov . --cov-report=term --cov-report=xml:coverage/coverage.xml
+      - name: Upload Bot coverage
+        uses: actions/upload-artifact@v4
+        with:
+          name: bot-coverage
+          path: bot/coverage/coverage.xml
+          retention-days: 1
+
+
+
   verify-coverage:
-    needs: [test-frontend-javascript, test-frontend-django, test-backend, test-embedder]
+    needs: [test-frontend-javascript, test-frontend-django, test-backend, test-embedder, test-bot]
     runs-on: ubuntu-latest
     steps:
       - name: Download JavaScript coverage
@@ -156,6 +181,11 @@ jobs:
         with:
           name: embedder-coverage
           path: embedder/coverage
+      - name: Download Bot coverage
+        uses: actions/download-artifact@v4
+        with:
+          name: bot-coverage
+          path: bot/coverage
 
       - name: Check coverage reports existence
         run: |
@@ -182,6 +212,13 @@ jobs:
             echo "Embedder coverage report not found!"
             exit 1
           fi
+
+          # Check Bot Test coverage
+          if [ ! -f "bot/coverage/coverage.xml" ]; then
+            echo "Bot coverage report not found!"
+            exit 1
+          fi
+
 
           echo "All coverage reports are present!"
 
@@ -276,6 +313,11 @@ jobs:
       with:
         name: embedder-coverage
         path: embedder/coverage
+    - name: Download Bot coverage
+      uses: actions/download-artifact@v4
+      with:
+        name: bot-coverage
+        path: bot/coverage
 
     - name: Echo Vars
       run: echo "Sonar URL $SONAR_HOST_URL, SonarQube Token $SONAR_TOKEN"
@@ -345,6 +387,24 @@ jobs:
                 push: ${{ github.event_name != 'pull_request' }}
                 tags: ${{ steps.meta-embedder.outputs.tags }}
                 labels: ${{ steps.meta-embedder.outputs.labels }}
+      - name: Extract metadata for Bot
+        id: meta-bot
+        uses: docker/metadata-action@v4
+        with:
+          images: ghcr.io/${{ github.repository }}/bot
+          tags: |
+            type=raw,value=latest
+            type=semver,pattern={{version}}
+            type=ref,event=branch
+            type=sha,format=short
+
+      - name: Build and push Bot image
+        uses: docker/build-push-action@v3
+        with:
+          context: bot
+          push: ${{ github.event_name != 'pull_request' }}
+          tags: ${{ steps.meta-bot.outputs.tags }}
+          labels: ${{ steps.meta-bot.outputs.labels }}
 
       - name: Extract metadata for Frontend
         id: meta-frontend
@@ -395,3 +455,4 @@ jobs:
           ssh ubuntu@$KUBERNETES_CLUSTER_VM_IP kubectl set image deployment/frontend frontend=ghcr.io/rkrisanoff/devops-spring-2025/frontend:${VERSION:1}
           ssh ubuntu@$KUBERNETES_CLUSTER_VM_IP kubectl set image deployment/backend backend=ghcr.io/rkrisanoff/devops-spring-2025/backend:${VERSION:1}
           ssh ubuntu@$KUBERNETES_CLUSTER_VM_IP kubectl set image deployment/embedder embedder=ghcr.io/rkrisanoff/devops-spring-2025/embedder:${VERSION:1}
+          ssh ubuntu@$KUBERNETES_CLUSTER_VM_IP kubectl set image deployment/bot bot=ghcr.io/rkrisanoff/devops-spring-2025/bot:${VERSION:1}
