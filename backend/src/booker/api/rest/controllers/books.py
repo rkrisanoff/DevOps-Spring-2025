@@ -116,48 +116,6 @@ class BooksController(Controller):
             status=book.status,
         )
 
-    @get("/{book_id:int}/similar")
-    async def get_similaris(
-        self,
-        session: AsyncSession,
-        book_id: int = Parameter(title="ID книги", description="Уникальный идентификатор книги"),
-        offset: int = Parameter(default=0, ge=0, description="Начальный индекс для пагинации"),
-        limit: int = Parameter(
-            default=10, ge=1, description="Максимальное количество элементов на странице"
-        ),
-    ) -> list[dict[str, Any]]:
-        query = select(Book).where(Book.id == book_id)
-        result = await session.execute(query)
-        book = result.scalar_one_or_none()
-
-        if book is None:
-            raise HTTPException(
-                status_code=404, detail=f"Книга с ID {book_id} не найдена"
-            ) from None
-
-        similar_books = await BookService.get_similar(
-            book_id=book_id, limit=limit, offset=offset, session=session
-        )
-
-        count_result = await session.execute(select(Book))
-        total = len(count_result.scalars().all()) - 1
-
-        return {
-            "target_book": {
-                "id": book.id,
-                "title": book.title,
-                "author": book.author,
-                "genres": book.genres,
-                "year": book.year,
-                "language": book.language,
-                "pages": book.pages,
-            },
-            "similar_books": similar_books,
-            "limit": limit,
-            "offset": offset,
-            "total": total,
-        }
-
     @post(dto=BookWriteDTO)
     async def create_book(
         self,
@@ -253,3 +211,91 @@ class BooksController(Controller):
 
         await session.delete(book)
         await session.commit()
+
+    @get("/{book_id:int}/similar")
+    async def get_similaris(
+        self,
+        session: AsyncSession,
+        book_id: int = Parameter(title="ID книги", description="Уникальный идентификатор книги"),
+        offset: int = Parameter(default=0, ge=0, description="Начальный индекс для пагинации"),
+        limit: int = Parameter(
+            default=10, ge=1, description="Максимальное количество элементов на странице"
+        ),
+    ) -> list[dict[str, Any]]:
+        query = select(Book).where(Book.id == book_id)
+        result = await session.execute(query)
+        book = result.scalar_one_or_none()
+
+        if book is None:
+            raise HTTPException(
+                status_code=404, detail=f"Книга с ID {book_id} не найдена"
+            ) from None
+
+        similar_books = await BookService.get_similar(
+            book_id=book_id, limit=limit, offset=offset, session=session
+        )
+
+        count_result = await session.execute(select(Book))
+        total = len(count_result.scalars().all()) - 1
+
+        return {
+            "target_book": {
+                "id": book.id,
+                "title": book.title,
+                "author": book.author,
+                "genres": book.genres,
+                "year": book.year,
+                "language": book.language,
+                "pages": book.pages,
+            },
+            "similar_books": similar_books,
+            "limit": limit,
+            "offset": offset,
+            "total": total,
+        }
+
+    @post("/similar", dto=BookWriteDTO)
+    async def similarify(
+        self,
+        config: WebServerConfig,
+        session: AsyncSession,
+        data: DTOData[BookDTO],
+        offset: int = Parameter(default=0, ge=0, description="Начальный индекс для пагинации"),
+        limit: int = Parameter(
+            default=10, ge=1, description="Максимальное количество элементов на странице"
+        ),
+    ) -> list[dict[str, Any]]:
+        book = Book(**data.as_builtins())
+        relevant_representation = f"""{book.title} was written by {book.author} in {book.year} on {book.language}.
+            Genres are {" ".join([book_genre_map.get(genre, genre) for genre in book.genres])}"""
+        response = requests.get(
+            f"{config.embedder.endpoint}/api/v1/infer/embedding",
+            params={"sentences": [relevant_representation]},
+        )
+        if not response.ok:
+            raise HTTPException(status_code=503, detail="Embedder service unavailable") from None
+
+        embedding = response.json()[0]
+
+        similar_books = await BookService.similarify(
+            book_embedding=embedding, limit=limit, offset=offset, session=session
+        )
+
+        count_result = await session.execute(select(Book))
+        total = len(count_result.scalars().all()) - 1
+
+        return {
+            "target_book": {
+                "id": book.id,
+                "title": book.title,
+                "author": book.author,
+                "genres": book.genres,
+                "year": book.year,
+                "language": book.language,
+                "pages": book.pages,
+            },
+            "similar_books": similar_books,
+            "limit": limit,
+            "offset": offset,
+            "total": total,
+        }

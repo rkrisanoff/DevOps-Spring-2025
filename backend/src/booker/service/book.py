@@ -48,3 +48,35 @@ OFFSET :offset
             },
         )
         return [row._asdict() for row in result]
+
+    @staticmethod
+    async def similarify(
+        book_embedding: list[float], limit: int, offset: int, *, session: AsyncSession
+    ) -> list[dict[str, Any]]:
+        query = sqlalchemy.text("""
+SELECT
+    main_book.id                     AS id,
+    main_book.title                  AS title,
+    main_book.author                 AS author,
+    main_book.genres                 AS genres,
+    main_book.pages                  AS pages,
+    main_book.year                   AS publication_year,
+    1 - (main_book.embedding <=> cast(:book_embedding as vector)) AS similarity
+FROM
+    book AS main_book
+ORDER BY
+    similarity DESC
+LIMIT :limit
+OFFSET :offset
+;
+""")
+        result = await session.execute(
+            query,
+            {
+                "book_embedding": f"""[{",".join(map(str, book_embedding))}]""",
+                "limit": limit,
+                "offset": offset,
+            },
+        )
+
+        return [row._asdict() for row in result]
