@@ -274,3 +274,134 @@ jobs:
 
     - name: Quality Status
       run: echo "The Quality Gate status is ${{ steps.sonarqube-quality-gate-check.outputs.quality-gate-status }}"
+
+  setup-kubernetes-cluster-ip-info:
+    runs-on: ubuntu-latest
+    if: startsWith(github.ref, 'refs/tags/')
+    needs: [sonarqube]
+    outputs:
+      kubernetes-cluster-ip: ${{ steps.kubernetes-cluster-ip-getter.outputs.value }}
+    steps:
+      - name: Install yc
+        run: |
+          curl https://storage.yandexcloud.net/yandexcloud-yc/install.sh | bash -s -- -i /opt/yc
+          source "/home/runner/.bashrc"
+
+      - name: Get Kubernetes cluster VM IP
+        id: kubernetes-cluster-ip-getter
+        run: |
+          JSON_RESPONSE=$(
+            /opt/yc/bin/yc \
+              --token ${{ secrets.YC_OATH_TOKEN }} \
+              --folder-id ${{ secrets.YC_FOLDER_ID }} \
+              --cloud-id ${{ secrets.YC_CLOUD_ID }} \
+              compute instance get book-app-vm --format json
+          )
+          KUBERNETES_CLUSTER_VM_IP=$(echo "$JSON_RESPONSE" | jq -r '.network_interfaces[0].primary_v4_address.one_to_one_nat.address')
+          echo "value=$KUBERNETES_CLUSTER_VM_IP" >> $GITHUB_OUTPUT
+
+  get-tag-value:
+    runs-on: ubuntu-latest
+    if: startsWith(github.ref, 'refs/tags/')
+    needs: [sonarqube]
+    outputs:
+      tag-version: ${{ steps.tag-getter.outputs.value }}
+    steps:
+      - uses: actions/checkout@v2
+      - name: Set output
+        id: tag-getter
+        run: echo "value=${GITHUB_REF#refs/*/}" >> $GITHUB_OUTPUT
+
+  build-and-publish:
+    runs-on: ubuntu-latest
+    needs: [sonarqube]
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v2
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Extract metadata for Backend
+        id: meta-backend
+        uses: docker/metadata-action@v4
+        with:
+          images: ghcr.io/${{ github.repository }}/backend
+          tags: |
+            type=raw,value=latest
+            type=semver,pattern={{version}}
+            type=ref,event=branch
+            type=sha,format=short
+      - name: Build and push Backend image
+        uses: docker/build-push-action@v3
+        with:
+                context: backend
+                push: ${{ github.event_name != 'pull_request' }}
+                tags: ${{ steps.meta-backend.outputs.tags }}
+                labels: ${{ steps.meta-backend.outputs.labels }}
+
+
+      - name: Extract metadata for Embedder
+        id: meta-embedder
+        uses: docker/metadata-action@v4
+        with:
+          images: ghcr.io/${{ github.repository }}/embedder
+          tags: |
+            type=raw,value=latest
+            type=semver,pattern={{version}}
+            type=ref,event=branch
+            type=sha,format=short
+      - name: Build and push Embedder image
+        uses: docker/build-push-action@v3
+        with:
+                context: embedder
+                push: ${{ github.event_name != 'pull_request' }}
+                tags: ${{ steps.meta-embedder.outputs.tags }}
+                labels: ${{ steps.meta-embedder.outputs.labels }}
+
+      - name: Extract metadata for Frontend
+        id: meta-frontend
+        uses: docker/metadata-action@v4
+        with:
+          images: ghcr.io/${{ github.repository }}/frontend
+          tags: |
+            type=raw,value=latest
+            type=semver,pattern={{version}}
+            type=ref,event=branch
+            type=sha,format=short
+
+      - name: Build and push Frontend image
+        uses: docker/build-push-action@v3
+        with:
+          context: frontend
+          push: ${{ github.event_name != 'pull_request' }}
+          tags: ${{ steps.meta-frontend.outputs.tags }}
+          labels: ${{ steps.meta-frontend.outputs.labels }}
+
+
+  deploy:
+    runs-on: ubuntu-latest
+    needs: [setup-kubernetes-cluster-ip-info, build-and-publish, get-tag-value]
+    env:
+      VERSION: ${{needs.get-tag-value.outputs.tag-version}}
+      KUBERNETES_CLUSTER_VM_IP: ${{ needs.setup-kubernetes-cluster-ip-info.outputs.kubernetes-cluster-ip }}
+    steps:
+      - name: Setup deploying ssh config
+        run: |
+          mkdir -vm 700 /home/runner/.ssh
+          ssh-keyscan -Ht ed25519 $KUBERNETES_CLUSTER_VM_IP > /home/runner/.ssh/known_hosts
+          echo "${{ secrets.SSH_KEY }}" > /home/runner/.ssh/id_ed25519
+          chmod 600 /home/runner/.ssh/id_ed25519
+      - name: Deploy everyone
+        run: |
+          ssh ubuntu@$KUBERNETES_CLUSTER_VM_IP kubectl set image deployment/frontend frontend=ghcr.io/rkrisanoff/devops-spring-2025/frontend:${VERSION:1}
+          ssh ubuntu@$KUBERNETES_CLUSTER_VM_IP kubectl set image deployment/backend backend=ghcr.io/rkrisanoff/devops-spring-2025/backend:${VERSION:1}
+          ssh ubuntu@$KUBERNETES_CLUSTER_VM_IP kubectl set image deployment/embedder embedder=ghcr.io/rkrisanoff/devops-spring-2025/embedder:${VERSION:1}
