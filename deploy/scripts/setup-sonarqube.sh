@@ -1,4 +1,18 @@
-sudo apt install -y postgresql unzip jq
+sudo apt update
+sudo apt install -y unzip jq
+
+# Postgresql installation from APT Repo
+# Import the repository signing key:
+sudo apt install curl ca-certificates
+sudo install -d /usr/share/postgresql-common/pgdg
+sudo curl -o /usr/share/postgresql-common/pgdg/apt.postgresql.org.asc --fail https://www.postgresql.org/media/keys/ACCC4CF8.asc
+
+# Create the repository configuration file:
+. /etc/os-release
+sudo sh -c "echo 'deb [signed-by=/usr/share/postgresql-common/pgdg/apt.postgresql.org.asc] https://apt.postgresql.org/pub/repos/apt $VERSION_CODENAME-pgdg main' > /etc/apt/sources.list.d/pgdg.list"
+
+sudo apt update
+sudo apt -y install postgresql
 
 # Postgres config
 CHECK_SERVER_ENCODING=$(sudo -u postgres psql -tAc "SHOW SERVER_ENCODING;")
@@ -34,7 +48,7 @@ $PSQL_COMMAND -d sonarqube -c "
     ALTER DEFAULT PRIVILEGES FOR ROLE ${POSTGRES_USERNAME} IN SCHEMA public GRANT ALL ON SEQUENCES TO ${POSTGRES_USERNAME};
 "
 
-sudo sed -i '/^# TYPE  DATABASE        USER            ADDRESS                 METHOD$/a local all sonarqube md5' /etc/postgresql/16/main/pg_hba.conf
+sudo sed -i '/^# TYPE  DATABASE        USER            ADDRESS                 METHOD$/a local all sonarqube md5' /etc/postgresql/17/main/pg_hba.conf
 sudo systemctl restart postgresql.service
 
 # JAVA installation

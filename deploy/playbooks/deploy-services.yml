@@ -43,6 +43,7 @@
       loop: "{{ k8s_manifests }}"
       loop_control:
         label: "{{ item | basename }}"
+        pause: 20
 
     - name: debug
       debug:

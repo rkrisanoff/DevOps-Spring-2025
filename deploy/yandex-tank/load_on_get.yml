@@ -1,5 +1,5 @@
 phantom:
-  address: 51.250.14.212:30200 # [Target's address]:[target's port]
+  address: 158.160.120.30:30200 # [Target's address]:[target's port]
   uris:
     - /
     - /get_books/
@@ -22,7 +22,7 @@ phantom:
     - /get_book/17/
   load_profile:
     load_type: rps # schedule load by defining requests per second
-    schedule: line(1, 100, 1m) const (100, 5m)
+    schedule: line(1, 25, 1m) const (25, 5m)
 console:
   enabled: true # enable console output
 telegraf:
