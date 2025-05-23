@@ -1,7 +1,7 @@
 
 [project]
 name = "backend"
-version = "0.2.0"
+version = "0.4.0"
 description = "Бэкенд для проекта DevOps-Spring-2025"
 readme = "README.md"
 requires-python = ">=3.12"
@@ -23,11 +23,14 @@ dependencies = [
     "prometheus-client==0.21.*",
     "pgvector==0.4.*",
     "requests==2.32.*",
+    "aiokafka==0.12.*",
+    "orjson==3.10.*",
 ]
 
 [dependency-groups]
 dev = [
     "dotenv==0.9.*",
+    "ipython>=9.2.0",
     "mypy==1.15.*",
     "pre-commit==4.1.*",
     "pytest==8.3.*",
@@ -36,7 +39,7 @@ dev = [
     "ruff==0.9.*",
 ]
 [project.scripts]
-run_webserver = "booker.entrypoints.run_webserver:run_server"
+run_webserver = "booker.run_webserver:run_server"
 
 [tool.ruff]
 line-length = 100

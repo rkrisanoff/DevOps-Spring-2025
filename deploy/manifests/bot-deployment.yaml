@@ -16,3 +16,22 @@ spec:
       containers:
       - name: bot
         image: ghcr.io/rkrisanoff/devops-spring-2025/bot:latest
+        env:
+          - name: BOT_TOKEN
+            value: ""
+          - name: BOT_BACKEND_HOST
+            value: "localhost"
+          - name: BOT_BACKEND_PORT
+            value: "8080"
+          - name: BOT_BROKER_HOST
+            value: "kafka.kafka.svc.cluster.local"
+          - name: BOT_BROKER_PORT
+            value: "9092"
+
+        resources:
+          requests:
+            memory: "256Mi"
+            cpu: "100m"
+          limits:
+            memory: "512Mi"
+            cpu: "300m"

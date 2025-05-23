@@ -2,7 +2,7 @@ import click
 import environ
 import uvicorn
 
-from booker.servers.webserver.server import create_server
+from booker.server import create_server
 from booker.settings import WebServerConfig
 
 

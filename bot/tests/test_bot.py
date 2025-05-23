@@ -2,59 +2,135 @@ import os
 import sys
 from unittest.mock import AsyncMock, MagicMock, patch
 
+import orjson
 import pytest
-from aiogram import types
 
 # Устанавливаем тестовые переменные окружения
-os.environ["BOT_TOKEN"] = "1234567890:ABCdefGHIjklMNOpqrsTUVwxyz"  # Правильный формат токена
+os.environ["BOT_TOKEN"] = "1234567890:ABCdefGHIjklMNOpqrsTUVwxyz"
 os.environ["BOT_BACKEND_HOST"] = "backend"
 os.environ["BOT_BACKEND_PORT"] = "8000"
+os.environ["BOT_BROKER_HOST"] = "kafka"
+os.environ["BOT_BROKER_PORT"] = "9092"
+os.environ["BOT_NOTIFICATION_TARGET_CHAT_ID"] = "-4904260504"
 
 # Мокируем создание бота перед импортом модуля
 with patch("aiogram.Bot"):
-    from bot.bot import cmd_help, cmd_start, handle_text
+    from bot.bot import wait_and_send_notifications
 
 
 @pytest.fixture
-def message():
-    """Фикстура для создания тестового сообщения"""
-    message = AsyncMock(spec=types.Message)
-    # Создаем вложенные моки для from_user
-    from_user = MagicMock()
-    from_user.first_name = "TestUser"
-    message.from_user = from_user
-    message.text = "test message"
-    # Настраиваем асинхронный метод answer
-    message.answer = AsyncMock()
-    return message
+def mock_consumer():
+    """Фикстура для создания мока Kafka консьюмера"""
+    consumer = AsyncMock()
+    consumer.start = AsyncMock()
+    consumer.stop = AsyncMock()
+    return consumer
+
+
+@pytest.fixture
+def mock_bot():
+    """Фикстура для создания мока бота"""
+    bot = AsyncMock()
+    bot.send_message = AsyncMock()
+    return bot
 
 
 @pytest.mark.asyncio
-async def test_cmd_start(message):
-    """Тест команды /start"""
-    await cmd_start(message)
-    message.answer.assert_called_once_with(
-        "Привет, TestUser! Я твой бот. Используй /help для списка команд."
-    )
+async def test_handle_create_event(mock_consumer, mock_bot):
+    """Тест обработки события создания книги"""
+    # Подготавливаем тестовые данные
+    test_data = {
+        "event_type": "create",
+        "payload": {"title": "Test Book", "author": "Test Author", "year": 2024},
+    }
+
+    # Настраиваем мок консьюмера
+    mock_consumer.__aiter__.return_value = [MagicMock(value=orjson.dumps(test_data))]
+
+    # Заменяем реальные объекты на моки
+    with (
+        patch("bot.bot.AIOKafkaConsumer", return_value=mock_consumer),
+        patch("bot.bot.bot", mock_bot),
+    ):
+        # Запускаем обработку
+        await wait_and_send_notifications()
+
+        # Проверяем, что сообщение было отправлено
+        mock_bot.send_message.assert_called_once()
+        call_args = mock_bot.send_message.call_args[1]
+        assert "Была создана книга" in call_args["text"]
+        assert "Test Book" in call_args["text"]
 
 
 @pytest.mark.asyncio
-async def test_cmd_help(message):
-    """Тест команды /help"""
-    await cmd_help(message)
-    expected_help_text = """
-    Список доступных команд:
-    /start - Начать взаимодействие с ботом
-    /help - Показать это сообщение
-    """
-    message.answer.assert_called_once_with(expected_help_text)
+async def test_handle_delete_event(mock_consumer, mock_bot):
+    """Тест обработки события удаления книги"""
+    test_data = {"event_type": "delete", "payload": {"book_id": 123}}
+
+    mock_consumer.__aiter__.return_value = [MagicMock(value=orjson.dumps(test_data))]
+
+    with (
+        patch("bot.bot.AIOKafkaConsumer", return_value=mock_consumer),
+        patch("bot.bot.bot", mock_bot),
+    ):
+        await wait_and_send_notifications()
+
+        mock_bot.send_message.assert_called_once()
+        call_args = mock_bot.send_message.call_args[1]
+        assert "Была удалена книга с id = 123" in call_args["text"]
 
 
 @pytest.mark.asyncio
-async def test_handle_text(message):
-    """Тест обработки текстового сообщения"""
-    await handle_text(message)
-    message.answer.assert_called_once_with("Вы написали: test message")
+async def test_handle_update_event(mock_consumer, mock_bot):
+    """Тест обработки события обновления книги"""
+    test_data = {
+        "event_type": "update",
+        "payload": {"book_id": 123, "title": "Updated Book", "author": "Updated Author"},
+    }
+
+    mock_consumer.__aiter__.return_value = [MagicMock(value=orjson.dumps(test_data))]
+
+    with (
+        patch("bot.bot.AIOKafkaConsumer", return_value=mock_consumer),
+        patch("bot.bot.bot", mock_bot),
+    ):
+        await wait_and_send_notifications()
+
+        mock_bot.send_message.assert_called_once()
+        call_args = mock_bot.send_message.call_args[1]
+        assert "Была обновлена книга с id = 123" in call_args["text"]
+
+
+@pytest.mark.asyncio
+async def test_handle_invalid_json(mock_consumer, mock_bot):
+    """Тест обработки некорректного JSON"""
+    mock_consumer.__aiter__.return_value = [MagicMock(value=b"invalid json")]
+
+    with (
+        patch("bot.bot.AIOKafkaConsumer", return_value=mock_consumer),
+        patch("bot.bot.bot", mock_bot),
+    ):
+        await wait_and_send_notifications()
+
+        # Проверяем, что сообщение не было отправлено
+        mock_bot.send_message.assert_not_called()
+
+
+@pytest.mark.asyncio
+async def test_handle_unknown_event_type(mock_consumer, mock_bot):
+    """Тест обработки неизвестного типа события"""
+    test_data = {"event_type": "unknown", "payload": {}}
+
+    mock_consumer.__aiter__.return_value = [MagicMock(value=orjson.dumps(test_data))]
+
+    with (
+        patch("bot.bot.AIOKafkaConsumer", return_value=mock_consumer),
+        patch("bot.bot.bot", mock_bot),
+    ):
+        await wait_and_send_notifications()
+
+        # Проверяем, что сообщение не было отправлено
+        mock_bot.send_message.assert_not_called()
 
 
 @pytest.mark.asyncio

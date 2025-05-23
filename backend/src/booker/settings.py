@@ -27,6 +27,16 @@ class EmbedderConfig:
 
 
 @environ.config(frozen=True)
+class BrokerConfig:
+    host: str = environ.var()
+    port: int = environ.var()
+
+    @property
+    def endpoint(self) -> str:
+        return f"{self.host}:{self.port}"
+
+
+@environ.config(frozen=True)
 class CommonConfig:
     version: str = environ.var(default="0.1.0")
 
@@ -40,3 +50,4 @@ class WebServerConfig:
         CommonConfig,
     )
     embedder: EmbedderConfig = environ.group(EmbedderConfig)
+    broker: BrokerConfig = environ.group(BrokerConfig)

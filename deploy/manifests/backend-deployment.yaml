@@ -35,7 +35,14 @@ spec:
           value: embedder.default.svc.cluster.local
         - name: PROJECT_EMBEDDER_PORT
           value: "9999"
-
+        - name: PROJECT_BROKER_HOST
+          value: kafka.kafka.svc.cluster.local
+        - name: PROJECT_BROKER_PORT
+          value: "9092"
         resources:
           requests:
-            cpu: 300m
+            memory: "256Mi"
+            cpu: "100m"
+          limits:
+            memory: "512Mi"
+            cpu: "300m"

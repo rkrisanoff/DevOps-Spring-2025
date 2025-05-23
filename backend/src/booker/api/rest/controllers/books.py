@@ -3,6 +3,7 @@ from typing import Any
 
 import requests
 import requests.api
+from aiokafka import AIOKafkaProducer
 from litestar import Controller, delete, get, patch, post
 from litestar.dto import DataclassDTO, DTOConfig, DTOData
 from litestar.exceptions import HTTPException
@@ -121,11 +122,11 @@ class BooksController(Controller):
         self,
         config: WebServerConfig,
         session: AsyncSession,
+        producer: AIOKafkaProducer,
         data: DTOData[BookDTO],
     ) -> BookDTO:
         try:
             book = Book(**data.as_builtins())
-            # Да, это кринж, но это +- приблизительно работает
             relevant_representation = f"""{book.title} was written by {book.author} in {book.year} on {book.language}.
                 Genres are {" ".join([book_genre_map.get(genre, genre) for genre in book.genres])}"""
             response = requests.get(
@@ -143,6 +144,13 @@ class BooksController(Controller):
             session.add(book)
             await session.commit()
             await session.refresh(book)
+            await producer.send_and_wait(
+                topic="notifications",
+                value={
+                    "event_type": "create",
+                    "payload": data.as_builtins(),
+                },
+            )
 
             return BookDTO(
                 id=book.id,
@@ -163,6 +171,7 @@ class BooksController(Controller):
     async def update_book(
         self,
         session: AsyncSession,
+        producer: AIOKafkaProducer,
         data: DTOData[BookDTO],
         book_id: int = Parameter(title="ID книги", description="Уникальный идентификатор книги"),
     ) -> BookDTO:
@@ -182,6 +191,13 @@ class BooksController(Controller):
 
         await session.commit()
         await session.refresh(book)
+        await producer.send_and_wait(
+            topic="notifications",
+            value={
+                "event_type": "update",
+                "payload": update_data,
+            },
+        )
 
         return BookDTO(
             id=book.id,
@@ -198,6 +214,7 @@ class BooksController(Controller):
     async def delete_book(
         self,
         session: AsyncSession,
+        producer: AIOKafkaProducer,
         book_id: int = Parameter(title="ID книги", description="Уникальный идентификатор книги"),
     ) -> None:
         query = select(Book).where(Book.id == book_id)
@@ -211,6 +228,14 @@ class BooksController(Controller):
 
         await session.delete(book)
         await session.commit()
+
+        await producer.send_and_wait(
+            topic="notifications",
+            value={
+                "event_type": "delete",
+                "payload": {"book_id": book_id},
+            },
+        )
 
     @get("/{book_id:int}/similar")
     async def get_similaris(

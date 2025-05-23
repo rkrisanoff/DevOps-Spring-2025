@@ -3,6 +3,7 @@ from datetime import datetime
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
+from aiokafka import AIOKafkaProducer
 from litestar import Litestar
 from litestar.testing import TestClient
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -28,14 +29,28 @@ def mock_config():
 
 
 @pytest.fixture
-def app(mock_session, mock_config) -> Litestar:
+def mock_producer():
+    producer = MagicMock(spec=AIOKafkaProducer)
+    producer.send_and_wait = AsyncMock()
+    return producer
+
+
+@pytest.fixture
+def app(mock_session, mock_config, mock_producer) -> Litestar:
     # Создаем зависимость для сессии
     async def get_session() -> AsyncGenerator[AsyncSession, None]:
         yield mock_session
 
+    async def get_producer() -> AsyncGenerator[AIOKafkaProducer, None]:
+        yield mock_producer
+
     app = Litestar(
         route_handlers=[BooksController],
-        dependencies={"session": get_session, "config": lambda: mock_config},
+        dependencies={
+            "session": get_session,
+            "config": lambda: mock_config,
+            "producer": get_producer,
+        },
     )
 
     return app
@@ -217,7 +232,15 @@ async def test_update_book(client: TestClient, mock_session, test_book):
     )
     mock_session.refresh.return_value = updated_book
 
-    update_data = {"title": "Updated Title"}
+    update_data = {
+        "title": "Updated Title",
+        "author": test_book.author,
+        "genres": [genre.value for genre in test_book.genres],
+        "year": test_book.year,
+        "language": test_book.language,
+        "pages": test_book.pages,
+        "status": test_book.status.value,
+    }
 
     # Act
     response = client.patch(f"/books/{test_book.id}", json=update_data)
@@ -232,7 +255,7 @@ async def test_update_book(client: TestClient, mock_session, test_book):
     assert data["year"] == test_book.year
     assert data["language"] == test_book.language
     assert data["pages"] == test_book.pages
-    assert data["status"] == test_book.status
+    assert data["status"] == update_data["status"]
     assert mock_session.commit.called
     assert mock_session.refresh.called
 
@@ -294,7 +317,15 @@ async def test_update_book_not_found(client: TestClient, mock_session):
     result.scalar_one_or_none.return_value = None
     mock_session.execute.return_value = result
 
-    update_data = {"title": "Updated Title"}
+    update_data = {
+        "title": "Updated Title",
+        "author": "Test Author",
+        "genres": [BookGenre.FICTION.value],
+        "year": 2024,
+        "language": "English",
+        "pages": 250,
+        "status": Status.TODO.value,
+    }
 
     # Act
     response = client.patch("/books/999", json=update_data)

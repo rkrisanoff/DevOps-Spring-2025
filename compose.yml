@@ -36,6 +36,44 @@ services:
     restart: "no"
 
 
+  kafka:
+    image: bitnami/kafka:latest
+    container_name: kafka
+    ports:
+      - "9092:9092"
+      - "9093:9093"
+    environment:
+      - KAFKA_ENABLE_KRAFT="false"
+      - KAFKA_CFG_NODE_ID=1
+      - KAFKA_CFG_PROCESS_ROLES=broker,controller
+      - KAFKA_CFG_CONTROLLER_QUORUM_VOTERS=1@kafka:9093
+      - KAFKA_CFG_CONTROLLER_LISTENER_NAMES=CONTROLLER
+      - ALLOW_PLAINTEXT_LISTENER=yes
+      - KAFKA_CFG_LISTENER_SECURITY_PROTOCOL_MAP=PLAINTEXT:PLAINTEXT,CONTROLLER:PLAINTEXT
+      - KAFKA_CFG_LISTENERS=PLAINTEXT://0.0.0.0:9092,CONTROLLER://0.0.0.0:9093
+     # - KAFKA_CFG_ADVERTISED_LISTENERS=PLAINTEXT://kafka:9092,PLAINTEXT_HOST://localhost:9093
+      - KAFKA_CFG_ADVERTISED_LISTENERS=PLAINTEXT://kafka:9092
+      - KAFKA_ADVERTISED_LISTENERS=PLAINTEXT://kafka:9092
+      - KAFKA_AUTO_CREATE_TOPICS_ENABLE=true
+     # - KAFKA_CFG_ADVERTISED_LISTENERS=PLAINTEXT://host.docker.internal:9092
+    healthcheck:
+      test: ["CMD", "nc", "-z", "localhost", "9092"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  kafka-ui:
+    image: provectuslabs/kafka-ui:latest
+    ports:
+      - "8082:8080"
+    environment:
+      - KAFKA_CLUSTERS_0_NAME=local-kafka
+      - KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS=kafka:9092
+    depends_on:
+      kafka:
+        condition: service_started
+
+
   backend:
     build:
       context: backend/
@@ -47,6 +85,8 @@ services:
         condition: service_completed_successfully
       embedder:
         condition: service_healthy
+      kafka:
+        condition: service_started
 
     environment:
       - PROJECT_POSTGRES_DATABASE=postgres
@@ -57,6 +97,8 @@ services:
       - PROJECT_COMMON_VERSION=0.4.0
       - PROJECT_EMBEDDER_HOST=embedder
       - PROJECT_EMBEDDER_PORT=9999
+      - PROJECT_BROKER_HOST=kafka
+      - PROJECT_BROKER_PORT=9092
     healthcheck:
       test: ["CMD", "curl", "-f", "http://backend:8000/version"]
       interval: 30s
@@ -81,9 +123,12 @@ services:
     build:
       context: bot/
       dockerfile: ./Dockerfile
+    depends_on:
+      kafka:
+        condition: service_healthy
 
     environment:
-      - BOT_TOKEN=''
+      - BOT_TOKEN=
       - BOT_BACKEND_HOST=backend
       - BOT_BACKEND_PORT=8000
 

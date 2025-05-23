@@ -25,6 +25,29 @@
       ansible.builtin.set_fact:
         k8s_manifests: "{{ lookup('ansible.builtin.fileglob', '{{ playbook_dir }}/../{{ manifests_dir }}/*.yaml', wantlist=True) }}"
 
+
+    - name: Create Kafka namespace
+      kubernetes.core.k8s:
+        name: kafka
+        api_version: v1
+        kind: Namespace
+        state: present
+
+    - name: Add Strimzi Helm repo
+      kubernetes.core.helm_repository:
+        name: strimzi
+        repo_url: https://strimzi.io/charts/
+
+    - name: Update Helm repos
+      shell: helm repo update
+
+    - name: Install Strimzi Kafka Operator
+      kubernetes.core.helm:
+        name: kafka-operator
+        chart_ref: strimzi/strimzi-kafka-operator
+        release_namespace: kafka
+
+
     - name: Sync manifest dir
       ansible.builtin.synchronize:
         src: "../{{ manifests_dir }}"
