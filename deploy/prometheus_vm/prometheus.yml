@@ -5,19 +5,19 @@ scrape_configs:
   - job_name: 'kubernetes-system'
     scrape_interval: 5s
     static_configs:
-      - targets: ['158.160.120.30:31000']
+      - targets: ['84.252.129.124:31000']
 
   - job_name: 'kube-state-metrics'
     scrape_interval: 5s
     static_configs:
-      - targets: ['158.160.120.30:31001']
+      - targets: ['84.252.129.124:31001']
 
   - job_name: 'frontend'
     scrape_interval: 5s
     static_configs:
-      - targets: ['158.160.120.30:30200']
+      - targets: ['84.252.129.124:30200']
 
   - job_name: 'backend'
     scrape_interval: 5s
     static_configs:
-      - targets: ['158.160.120.30:31002']
+      - targets: ['84.252.129.124:31002']

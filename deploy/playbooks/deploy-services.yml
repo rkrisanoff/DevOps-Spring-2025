@@ -29,8 +29,15 @@
     - name: Create Kafka namespace
       kubernetes.core.k8s:
         name: kafka
+        kubeconfig: /home/{{ user }}/.kube/config
         api_version: v1
         kind: Namespace
+        state: present
+
+    - name: Install helm classically
+      ansible.builtin.snap:
+        name: helm
+        classic: yes
         state: present
 
     - name: Add Strimzi Helm repo
@@ -44,6 +51,7 @@
     - name: Install Strimzi Kafka Operator
       kubernetes.core.helm:
         name: kafka-operator
+        kubeconfig: /home/{{ user }}/.kube/config
         chart_ref: strimzi/strimzi-kafka-operator
         release_namespace: kafka
 
@@ -66,7 +74,6 @@
       loop: "{{ k8s_manifests }}"
       loop_control:
         label: "{{ item | basename }}"
-        pause: 20
 
     - name: debug
       debug:
