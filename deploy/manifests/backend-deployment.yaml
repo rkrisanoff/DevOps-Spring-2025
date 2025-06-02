@@ -36,9 +36,15 @@ spec:
         - name: PROJECT_EMBEDDER_PORT
           value: "9999"
         - name: PROJECT_BROKER_HOST
-          value: kafka.kafka.svc.cluster.local
+          valueFrom:
+            secretKeyRef:
+              name: notification-bot-secret
+              key: BROKER_HOST
         - name: PROJECT_BROKER_PORT
-          value: "9092"
+          valueFrom:
+              secretKeyRef:
+                name: notification-bot-secret
+                key: BROKER_PORT
         resources:
           requests:
             memory: "256Mi"

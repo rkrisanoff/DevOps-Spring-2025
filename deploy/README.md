@@ -8,7 +8,11 @@
     ```
 2. Настроить зеркало для провайдеров terraform.
 3. Создать конфигурацию образа: добавить необходимых пользователей, их права и ключи в `cloud-init.txt` (пример - `cloud-init-example.txt`)
-4. Запустить проект целиком:
+4. Добавить токен для телеграм-бота в переменную среды:
+    ```bash
+    export TF_VAR_BOT_TOKEN=<YOUR TOKEN>
+    ```
+5. Запустить проект целиком:
     ```bash
     cd deploy/
     bash deploy.sh
@@ -22,6 +26,7 @@
 ### Terraform
 ```bash
 terraform init
+export TF_VAR_BOT_TOKEN=<YOUR TOKEN>
 terraform apply --auto-approve
 ```
 
@@ -45,6 +50,7 @@ ansible-playbook --inventory "${EXTERNAL_IP}," \
                  playbooks/deploy-metrics.yml -v
 ```
 
+Часть файлов будет сгенерирована автоматически при помощи `terraform`. Для разворачивания без `terraform` нужно взять шаблоны из папки `templates/`, сконфигурировать их вручную и положить в соответствующие директории (как указано в `main.tf`)
 
 ## Патчи для HPA
 ```bash

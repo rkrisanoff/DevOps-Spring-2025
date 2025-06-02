@@ -12,6 +12,11 @@ provider "yandex" {
 }
 
 
+variable "BOT_TOKEN" {
+  type = string
+}
+
+
 resource "yandex_compute_disk" "boot-disk" {
   name     = "book-app-drive"
   type     = "network-ssd"
@@ -112,19 +117,46 @@ resource "null_resource" "prepare_vm" {
 
 
 locals {
+  # build Prometheus properties
   prometheus_custom_config = templatefile(
     "templates/prometheus_template.yml",
     {
       external_ip_address = yandex_compute_instance.book-app-vm.network_interface.0.nat_ip_address
     }
   )
+
+  # build Kubernetes Manifest for TG Bot
+  tg_bot_manifest = templatefile(
+    "templates/notification_bot_secret_template.yml",
+    {
+      bot_token = var.BOT_TOKEN,
+      monitoring_ip_address = yandex_compute_instance.monitoring-vm.network_interface.0.nat_ip_address
+    }
+  )
+
+  # build Kafka properties to use with custom IP
+  kafka_server_properties = templatefile(
+    "templates/kafka_server_template.properties",
+    {
+      monitoring_ip_address = yandex_compute_instance.monitoring-vm.network_interface.0.nat_ip_address
+    }
+  )
 }
 
-resource "local_file" "copy_file" {
+resource "local_file" "copy_file_prometheus" {
   content = local.prometheus_custom_config
   filename = "prometheus_vm/prometheus.yml"
 }
 
+resource "local_file" "copy_file_notification_bot_secret" {
+  content = local.tg_bot_manifest
+  filename = "manifests/notification-bot-secret.yaml"
+}
+
+resource "local_file" "copy_file_kafka" {
+  content = local.kafka_server_properties
+  filename = "kafka/kafka_server.properties"
+}
 
 resource "null_resource" "setup_monitoring" {
   connection {
@@ -153,12 +185,19 @@ resource "null_resource" "setup_monitoring" {
     destination = "/home/ubuntu/grafana_provisioning/"
   }
 
+  # Copy Kafka Config to remote
+  provisioner "file" {
+    source      = "kafka/kafka_server.properties"
+    destination = "/home/ubuntu/kafka_server.properties"
+  }
+
   # Run setup scripts
   provisioner "remote-exec" {
     scripts = [
       "scripts/setup-prometheus.sh",
       "scripts/setup-grafana.sh",
-      "scripts/setup-sonarqube.sh"
+      "scripts/setup-sonarqube.sh",
+      "scripts/setup-kafka.sh"
     ]
   }
 

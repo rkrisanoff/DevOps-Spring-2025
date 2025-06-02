@@ -188,3 +188,6 @@ coverage/
 package-lock.json
 
 .scannerwork/
+.token
+
+deploy/manifests/notification-bot-secret.yaml

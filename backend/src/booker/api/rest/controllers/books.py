@@ -188,6 +188,7 @@ class BooksController(Controller):
         for field, value in update_data.items():
             if value is not None:
                 setattr(book, field, value)
+        update_data["book_id"] = book_id
 
         await session.commit()
         await session.refresh(book)
